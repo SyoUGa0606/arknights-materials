@@ -1490,6 +1490,11 @@
     border-color: rgba(214, 255, 58, 0.4);
     color: var(--accent);
   }
+  .modal-action:disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+  }
   .modal-action.primary {
     background: var(--accent);
     color: #0a0c0d;
@@ -1774,7 +1779,7 @@
     .modal-title { font-size: 20px; padding-right: 36px; }
     .modal-footer { flex-wrap: wrap; gap: 10px; }
     .modal-actions { width: 100%; justify-content: stretch; }
-    .modal-action { flex: 1; padding: 10px 14px; }
+    .modal-action { flex: 1; padding: 10px 8px; letter-spacing: 0.04em; white-space: nowrap; }
   }
   @media (max-width: 540px) {
     .jump-to-mats {
@@ -2188,6 +2193,7 @@
     <div class="modal-footer">
       <span class="selection-count" id="modalCount"><strong>0</strong>項目を選択中</span>
       <div class="modal-actions">
+        <button class="modal-action" id="modalSelectAll" type="button">すべて選択</button>
         <button class="modal-action" id="modalReset" type="button">リセット</button>
         <button class="modal-action primary" id="modalDone" type="button">決定</button>
       </div>
@@ -2292,6 +2298,7 @@ const modalBackdrop = document.getElementById('modalBackdrop');
 const modalCloseBtn = document.getElementById('modalClose');
 const modalDoneBtn = document.getElementById('modalDone');
 const modalResetBtn = document.getElementById('modalReset');
+const modalSelectAllBtn = document.getElementById('modalSelectAll');
 const modalTitle = document.getElementById('modalTitle');
 const modalClass = document.getElementById('modalClass');
 const modalStars = document.getElementById('modalStars');
@@ -3025,6 +3032,7 @@ function openModal(opId) {
   const selectable = modalChecks().length > 0;
   modalCount.style.visibility = selectable ? '' : 'hidden'; // keeps the close button right-aligned
   modalResetBtn.style.display = selectable ? '' : 'none';
+  modalSelectAllBtn.style.display = selectable ? '' : 'none';
   modalDoneBtn.textContent = selectable ? '決定' : '閉じる';
 
   modalBackdrop.hidden = false;
@@ -3058,8 +3066,10 @@ function commitModal() {
 }
 
 function updateModalCount() {
-  const checked = Array.from(modalChecks()).filter((cb) => cb.checked).length;
+  const checks = Array.from(modalChecks());
+  const checked = checks.filter((cb) => cb.checked).length;
   modalCount.innerHTML = `<strong>${checked}</strong>項目を選択中`;
+  modalSelectAllBtn.disabled = checks.length > 0 && checked === checks.length;
 }
 
 // event delegation: each open re-renders the body, so listen on the container
@@ -3070,6 +3080,10 @@ modalCloseBtn.addEventListener('click', closeModal);
 modalDoneBtn.addEventListener('click', commitModal);
 modalResetBtn.addEventListener('click', () => {
   modalChecks().forEach((cb) => { cb.checked = false; });
+  updateModalCount();
+});
+modalSelectAllBtn.addEventListener('click', () => {
+  modalChecks().forEach((cb) => { cb.checked = true; });
   updateModalCount();
 });
 
