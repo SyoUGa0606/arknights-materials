@@ -673,7 +673,11 @@
     const box = document.getElementById('visitors');
     const num = document.getElementById('visitorsNum');
     if (!/^https?:$/.test(location.protocol)) return;
-    fetch('https://syouga.goatcounter.com/counter/TOTAL.json')
+    // GoatCounter caches each counter URL for hours (TOTAL.json stayed at 0 for 5h+),
+    // so change the URL every 4 h. Any start date before the site launched gives the full total.
+    const slot = Math.floor(Date.now() / (4 * 3600 * 1000));
+    const start = new Date(Date.UTC(2025, 0, 1) + (slot % 300) * 86400000).toISOString().slice(0, 10);
+    fetch(`https://syouga.goatcounter.com/counter/TOTAL.json?start=${start}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((d) => {
         if (!d || d.count == null) return;
