@@ -1,0 +1,3086 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>オペレーター選択 | ARKNIGHTS MATERIALS COUNTER</title>
+<meta name="description" content="アークナイツの全オペレーター（★1〜★6）からレアリティ・職業で絞り込み、昇進・スキル特化・モジュール強化に必要な素材数を自動で合計するツール。" />
+<meta name="keywords" content="アークナイツ,Arknights,素材計算,オペレーター選択,昇進,スキル特化,モジュール,育成計画" />
+<meta name="theme-color" content="#0a0c0d" />
+<meta name="color-scheme" content="dark" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="robots" content="index,follow" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="ARKNIGHTS MATERIALS COUNTER" />
+<meta property="og:title" content="オペレーター選択 | ARKNIGHTS MATERIALS COUNTER" />
+<meta property="og:description" content="アークナイツの全オペレーターから育成に必要な素材を自動で集計するページ。" />
+<meta property="og:locale" content="ja_JP" />
+<meta property="og:image" content="assets/brand.png" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="オペレーター選択 | ARKNIGHTS MATERIALS COUNTER" />
+<meta name="twitter:description" content="★1〜★6 のオペレーターから育成素材を自動で合計" />
+<meta name="twitter:image" content="assets/brand.png" />
+
+<link rel="icon" type="image/png" href="assets/brand.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Oswald:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: #d6ff3a;
+    --accent-glow: rgba(214, 255, 58, 0.55);
+    --ink: #ffffff;
+    --bg: #0a0c0d;
+    --panel: rgba(22, 26, 30, 0.55);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --rarity-6: #ffe14a;
+    --rarity-5: #ffc83a;
+    --rarity-4: #b06bff;
+    --rarity-3: #4ad6ff;
+    --rarity-2: #b9ff4a;
+    --rarity-1: #c8c8c8;
+    --new: #ff7a45;
+    --new-glow: rgba(255, 122, 69, 0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ======== Decorative background ======== */
+  .bg-stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse at 80% 20%, rgba(214,255,58,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 80%, rgba(74,214,255,0.03) 0%, transparent 50%),
+      linear-gradient(180deg, #0a0c0d 0%, #0d1012 100%);
+  }
+
+  .bg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .bg-overlay.scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.018) 0px,
+      rgba(255,255,255,0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode: overlay;
+    opacity: 0.45;
+  }
+
+  .bg-overlay.grain {
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Corner crosshairs */
+  .cross {
+    position: fixed;
+    z-index: 3;
+    width: 14px; height: 14px;
+    pointer-events: none;
+    color: rgba(255,255,255,0.28);
+  }
+  .cross svg { width: 100%; height: 100%; }
+  .cross.tl { top: 22px; left: 22px; }
+  .cross.tr { top: 22px; right: 22px; }
+  .cross.bl { bottom: 22px; left: 22px; }
+  .cross.br { bottom: 22px; right: 22px; }
+
+  /* ======== Layout ======== */
+  .page {
+    position: relative;
+    z-index: 5;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 40px 60px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    user-select: none;
+  }
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .brand-mark { height: 36px; width: auto; flex: 0 0 auto; display: flex; align-items: center; }
+  .brand-mark img { height: 100%; width: auto; display: block; }
+  .brand-name {
+    font-family: "Oswald", sans-serif;
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: 0.18em;
+    color: #fff;
+  }
+  .brand-sub {
+    margin-top: 6px;
+    margin-left: 32px;
+    font-family: "Oswald", sans-serif;
+    font-weight: 300;
+    font-size: 11px;
+    letter-spacing: 0.42em;
+    color: rgba(255,255,255,0.78);
+    border-top: 1px solid rgba(255,255,255,0.35);
+    padding-top: 4px;
+    width: max-content;
+  }
+
+  /* Back button (octagonal cut, neon green outline) */
+  .back-btn-frame {
+    --cut: 12px;
+    display: inline-block;
+    padding: 1px;
+    background: var(--accent);
+    clip-path: polygon(
+      var(--cut) 0,
+      calc(100% - var(--cut)) 0,
+      100% var(--cut),
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      var(--cut) 100%,
+      0 calc(100% - var(--cut)),
+      0 var(--cut)
+    );
+    filter: drop-shadow(0 0 8px rgba(214,255,58,0.35));
+    transition: filter 0.25s ease, transform 0.25s ease;
+    text-decoration: none;
+  }
+  .back-btn-frame:hover {
+    filter: drop-shadow(0 0 14px var(--accent-glow));
+    transform: translateY(-1px);
+  }
+  .back-btn {
+    --cut: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    background: rgba(8, 10, 12, 0.92);
+    color: var(--accent);
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-decoration: none;
+    clip-path: polygon(
+      var(--cut) 0,
+      calc(100% - var(--cut)) 0,
+      100% var(--cut),
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      var(--cut) 100%,
+      0 calc(100% - var(--cut)),
+      0 var(--cut)
+    );
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .back-btn-frame:hover .back-btn {
+    background: var(--accent);
+    color: #0a0c0d;
+  }
+  .back-btn .chev {
+    width: 14px; height: 14px;
+    flex: 0 0 auto;
+  }
+
+  /* ======== Title section ======== */
+  .title-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    margin-bottom: 56px;
+    position: relative;
+  }
+
+  .page-title {
+    font-family: "Saira Stencil One", "Oswald", sans-serif;
+    font-weight: 400;
+    font-size: clamp(48px, 6vw, 84px);
+    line-height: 0.96;
+    letter-spacing: 0.01em;
+    color: #fff;
+    margin-bottom: 32px;
+  }
+  .page-title .dot-accent {
+    color: var(--accent);
+    text-shadow: 0 0 18px var(--accent-glow);
+  }
+
+  .overview-label {
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .overview-text {
+    font-size: 13px;
+    line-height: 1.8;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* Rhodes Island silhouette */
+  .rhodes-art {
+    position: relative;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rhodes-art .tower {
+    width: auto;
+    max-width: 220px;
+    max-height: 220px;
+    height: auto;
+    display: block;
+  }
+  .rhodes-label {
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: "Oswald", sans-serif;
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: 0.32em;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .rhodes-streaks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Section divider */
+  .section-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 10%, rgba(255,255,255,0.18) 90%, transparent);
+    margin: 0 0 36px;
+  }
+
+  /* Section heading */
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #fff;
+    margin-bottom: 26px;
+  }
+  .section-heading::before {
+    content: "";
+    display: inline-block;
+    width: 3px;
+    height: 20px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .section-heading .muted {
+    font-family: "Oswald", sans-serif;
+    font-weight: 300;
+    font-size: 12px;
+    letter-spacing: 0.32em;
+    color: rgba(255,255,255,0.4);
+    margin-left: 8px;
+  }
+
+  /* ======== Rarity tabs ======== */
+  .rarity-tabs {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .rarity-tab {
+    --cut: 10px;
+    position: relative;
+    background: rgba(18, 22, 26, 0.6);
+    border: 1px solid var(--panel-border);
+    color: rgba(255,255,255,0.85);
+    font-family: "Noto Sans JP", sans-serif;
+    cursor: pointer;
+    padding: 14px 8px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    clip-path: polygon(
+      var(--cut) 0,
+      calc(100% - var(--cut)) 0,
+      100% var(--cut),
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      var(--cut) 100%,
+      0 calc(100% - var(--cut)),
+      0 var(--cut)
+    );
+  }
+  .rarity-tab:hover {
+    background: rgba(28, 34, 40, 0.7);
+  }
+  .rarity-tab.is-active {
+    background: rgba(8, 10, 12, 0.92);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(214,255,58,0.25);
+  }
+  .rarity-tab .star-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: "Oswald", sans-serif;
+    font-size: 22px;
+    font-weight: 500;
+  }
+  .rarity-tab .star-row svg { width: 18px; height: 18px; flex: 0 0 auto; }
+  .rarity-tab .tab-new {
+    position: absolute;
+    top: 5px;
+    right: 12px;
+    font-family: "Oswald", sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--new);
+  }
+  .rarity-tab .label { display: none; }
+
+  /* Star colors per rarity */
+  .rarity-tab[data-rarity="6"] .star-row svg { fill: var(--rarity-6); }
+  .rarity-tab[data-rarity="5"] .star-row svg { fill: var(--rarity-5); }
+  .rarity-tab[data-rarity="4"] .star-row svg { fill: var(--rarity-4); }
+  .rarity-tab[data-rarity="3"] .star-row svg { fill: var(--rarity-3); }
+  .rarity-tab[data-rarity="2"] .star-row svg { fill: var(--rarity-2); }
+  .rarity-tab[data-rarity="1"] .star-row svg { fill: var(--rarity-1); }
+
+  /* ======== Profession tabs (職業を選択) ======== */
+  .section-heading.section-heading-sub {
+    margin-top: 28px;
+    font-size: 16px;
+  }
+
+  /* ======== Section notice / disclaimer ======== */
+  .section-notice {
+    position: relative;
+    margin: -10px 0 22px;
+    padding: 14px 18px 14px 22px;
+    background: rgba(8, 10, 12, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-left: 2px solid var(--accent);
+    box-shadow: 0 0 14px rgba(0, 0, 0, 0.35);
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.78);
+    letter-spacing: 0.02em;
+  }
+  .section-notice .notice-label {
+    display: inline-block;
+    margin-right: 10px;
+    padding: 1px 8px;
+    background: var(--accent);
+    color: #0a0c0d;
+    font-family: "Oswald", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    vertical-align: 1px;
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .section-notice p {
+    margin: 0;
+  }
+  .section-notice p + p {
+    margin-top: 4px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .class-tabs {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .class-tab {
+    --cut: 10px;
+    position: relative;
+    background: rgba(18, 22, 26, 0.6);
+    border: 1px solid var(--panel-border);
+    color: rgba(255, 255, 255, 0.85);
+    font-family: "Noto Sans JP", sans-serif;
+    cursor: pointer;
+    padding: 12px 4px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    clip-path: polygon(
+      var(--cut) 0,
+      calc(100% - var(--cut)) 0,
+      100% var(--cut),
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      var(--cut) 100%,
+      0 calc(100% - var(--cut)),
+      0 var(--cut)
+    );
+  }
+  .class-tab:hover {
+    background: rgba(28, 34, 40, 0.75);
+  }
+  .class-tab.is-active {
+    background: rgba(8, 10, 12, 0.92);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(214, 255, 58, 0.25);
+  }
+  .class-tab .class-icon {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .class-tab .class-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: brightness(1.05);
+    transition: filter 0.2s ease;
+  }
+  .class-tab.is-active .class-icon img {
+    filter: brightness(1.2) drop-shadow(0 0 6px rgba(214, 255, 58, 0.5));
+  }
+  .class-tab .class-name {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .class-tab .class-en {
+    font-family: "Oswald", sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .class-tab.is-active .class-en { color: rgba(255, 255, 255, 0.85); }
+
+  /* ======== Search ======== */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 22px;
+  }
+  .search-wrap .search-icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    color: rgba(255,255,255,0.4);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    background: rgba(18, 22, 26, 0.55);
+    border: 1px solid var(--panel-border);
+    color: #fff;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 14px;
+    padding: 14px 16px 14px 46px;
+    border-radius: 4px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .search-input::placeholder { color: rgba(255,255,255,0.4); }
+  .search-input:focus {
+    outline: none;
+    border-color: rgba(214,255,58,0.55);
+    background: rgba(22, 28, 32, 0.7);
+  }
+
+  /* ======== Sort toggle / data info ======== */
+  .sort-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    margin: -8px 0 16px;
+  }
+  .sort-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .sort-label {
+    font-family: "Oswald", sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-right: 4px;
+  }
+  .sort-btn {
+    background: rgba(18, 22, 26, 0.6);
+    border: 1px solid var(--panel-border);
+    color: rgba(255, 255, 255, 0.75);
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .sort-btn:hover {
+    border-color: rgba(214, 255, 58, 0.4);
+    color: #fff;
+  }
+  .sort-btn.is-active {
+    background: rgba(8, 10, 12, 0.92);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .data-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .data-info .new-chip {
+    font-family: "Oswald", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #0a0c0d;
+    background: var(--new);
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+
+  /* ======== Operator grid ======== */
+  .operator-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .op-card {
+    position: relative;
+    background: linear-gradient(180deg, rgba(28, 34, 40, 0.7) 0%, rgba(14, 18, 22, 0.85) 100%);
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    padding: 6px 6px 8px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    user-select: none;
+  }
+  .op-card:hover {
+    border-color: rgba(214,255,58,0.4);
+    transform: translateY(-2px);
+  }
+  .op-card.is-active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(214,255,58,0.3);
+  }
+  /* operators that first appeared in the latest monthly update */
+  .op-card.is-new:not(.is-active) {
+    border-color: rgba(255, 122, 69, 0.6);
+    box-shadow: 0 0 12px rgba(255, 122, 69, 0.2);
+  }
+  .op-new-tag {
+    position: absolute;
+    top: -7px;
+    left: -5px;
+    z-index: 2;
+    font-family: "Oswald", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    line-height: 1.5;
+    color: #0a0c0d;
+    background: var(--new);
+    padding: 0 6px;
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--new-glow);
+    pointer-events: none;
+  }
+
+  .op-portrait {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 8px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #1a1f23, #0d1012);
+  }
+  .op-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .op-class {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 22px;
+    height: 22px;
+    background: rgba(8, 10, 12, 0.78);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.85);
+  }
+  .op-class img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    display: block;
+  }
+  .op-class-label {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.85);
+    background: rgba(8,10,12,0.65);
+    padding: 2px 5px;
+    border-radius: 2px;
+  }
+
+  .op-name {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .op-stars {
+    display: flex;
+    justify-content: center;
+    gap: 1px;
+  }
+  .op-stars svg { width: 9px; height: 9px; }
+  .op-stars .full { fill: var(--rarity-5); }
+  .op-stars .empty { fill: rgba(255,255,255,0.15); }
+  .op-stars .half { fill: url(#halfgrad); }
+
+  /* ======== Clear button ======== */
+  .clear-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 56px;
+  }
+  .clear-btn {
+    background: rgba(18, 22, 26, 0.55);
+    border: 1px solid var(--panel-border);
+    color: rgba(255,255,255,0.85);
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding: 10px 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  .clear-btn:hover {
+    background: rgba(28, 34, 40, 0.7);
+    border-color: rgba(214,255,58,0.4);
+    color: var(--accent);
+  }
+  .clear-btn .icon { width: 14px; height: 14px; }
+
+  /* ======== Selection summary ======== */
+  .summary-section { margin-bottom: 56px; }
+
+  .summary-section .section-heading { position: relative; }
+  .summary-section .section-heading .summary-count {
+    margin-left: auto;
+    font-family: "Oswald", sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .summary-section .section-heading .summary-count strong {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-right: 4px;
+  }
+
+  .summary-empty {
+    background: rgba(18, 22, 26, 0.35);
+    border: 1px dashed var(--panel-border);
+    border-radius: 6px;
+    padding: 36px 24px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+
+  .summary-table-wrap {
+    background: rgba(18, 22, 26, 0.4);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+  }
+  .summary-table th {
+    text-align: left;
+    font-family: "Oswald", sans-serif;
+    font-weight: 400;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    color: rgba(255, 255, 255, 0.55);
+    padding: 14px 16px;
+    background: rgba(8, 10, 12, 0.5);
+    border-bottom: 1px solid var(--panel-border);
+    white-space: nowrap;
+  }
+  .summary-table th.col-count,
+  .summary-table th.col-actions { text-align: right; }
+
+  .summary-table tbody tr {
+    transition: background 0.2s ease;
+    cursor: pointer;
+  }
+  .summary-table tbody tr:hover {
+    background: rgba(214, 255, 58, 0.04);
+  }
+  .summary-table tbody tr + tr td {
+    border-top: 1px solid var(--panel-border);
+  }
+  .summary-table td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    font-size: 13px;
+  }
+
+  .summary-table .op-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 200px;
+  }
+  .summary-table .op-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1a1f23, #0d1012);
+    flex: 0 0 auto;
+  }
+  .summary-table .op-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .summary-table .op-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+  .summary-table .op-meta .name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .summary-table .op-meta .meta {
+    font-family: "Oswald", sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .summary-table .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid rgba(214, 255, 58, 0.4);
+    background: rgba(214, 255, 58, 0.08);
+    color: var(--accent);
+    border-radius: 3px;
+    font-family: "Oswald", sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .chip-empty {
+    color: rgba(255, 255, 255, 0.22);
+    font-size: 14px;
+    padding: 0 4px;
+  }
+
+  .summary-table td.count {
+    font-family: "Oswald", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .summary-table td.count .unit {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: 3px;
+  }
+
+  .summary-table td.actions {
+    white-space: nowrap;
+    text-align: right;
+  }
+  .row-action {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: rgba(255, 255, 255, 0.55);
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-left: 4px;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .row-action svg { width: 12px; height: 12px; }
+  .row-action:hover {
+    border-color: rgba(214, 255, 58, 0.5);
+    color: var(--accent);
+  }
+  .row-action[data-action="remove"]:hover {
+    border-color: rgba(255, 100, 100, 0.5);
+    color: #ff7a7a;
+    background: rgba(255, 100, 100, 0.06);
+  }
+
+  /* ======== Required materials summary ======== */
+  .materials-section { margin-bottom: 56px; }
+
+  .materials-body {
+    background: rgba(18, 22, 26, 0.4);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 22px 24px 24px;
+  }
+
+  .mat-group { margin-bottom: 20px; }
+  .mat-group:last-child { margin-bottom: 0; }
+  .mat-group-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  .mat-group-heading::before {
+    content: "";
+    width: 2px;
+    height: 14px;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+  .mat-group-heading .en {
+    font-family: "Oswald", sans-serif;
+    font-weight: 300;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: 4px;
+  }
+
+  .mat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+  }
+
+  .mat-card {
+    background: rgba(8, 10, 12, 0.55);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .mat-card:hover {
+    background: rgba(18, 22, 26, 0.7);
+    border-color: rgba(214, 255, 58, 0.35);
+  }
+  /* 品質 T1〜T5（Wiki アイテム一覧）。0 = 未確定 */
+  .mat-card { --tier-color: rgba(255, 255, 255, 0.15); }
+  .mat-card[data-tier="5"] { --tier-color: #ffcc3a; }
+  .mat-card[data-tier="4"] { --tier-color: #c48cff; }
+  .mat-card[data-tier="3"] { --tier-color: #4ad6ff; }
+  .mat-card[data-tier="2"] { --tier-color: var(--accent); }
+  .mat-card[data-tier="1"] { --tier-color: rgba(255, 255, 255, 0.45); }
+  /* SoC・アーツ学は初級〜上級の 3 段階 */
+  .mat-card[data-rank="3"] { --tier-color: var(--accent); }
+  .mat-card[data-rank="2"] { --tier-color: #4ad6ff; }
+  .mat-card[data-rank="1"] { --tier-color: rgba(255, 255, 255, 0.45); }
+  /* hover でも左線はティア色のまま */
+  .mat-card, .mat-card:hover { border-left-color: var(--tier-color); }
+
+  .mat-card .qty-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mat-card .tier-tag {
+    margin-left: auto;
+    flex: 0 0 auto;
+    font-family: "Oswald", sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 2px;
+    color: var(--tier-color);
+    border: 1px solid var(--tier-color);
+  }
+  .mat-card .tier-tag.is-unknown {
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+  .mat-card .from-craft {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+  }
+
+  /* 加工できる素材（クリックで加工レシピに置き換え） */
+  .mat-card.is-craftable { cursor: pointer; }
+  .mat-card.is-craftable:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .mat-card .mat-icon { position: relative; }
+  .mat-card .craft-mark {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 13px;
+    text-align: center;
+    color: #0a0c0d;
+    background: rgba(214, 255, 58, 0.78);
+    pointer-events: none;
+  }
+  .mat-card.is-craftable:hover .craft-mark { background: var(--accent); }
+
+  .craft-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .craft-bar .craft-hint { flex: 1 1 260px; line-height: 1.6; }
+  .craft-bar .craft-hint .mark {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    margin: 0 2px;
+    border-radius: 2px;
+    color: #0a0c0d;
+    background: var(--accent);
+    vertical-align: 1px;
+  }
+  .craft-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+  .craft-chips .label { color: rgba(255, 255, 255, 0.75); margin-right: 2px; }
+  .craft-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 10px;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 12px;
+    color: var(--accent);
+    background: rgba(214, 255, 58, 0.06);
+    border: 1px solid rgba(214, 255, 58, 0.35);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .craft-chip:hover { background: rgba(214, 255, 58, 0.14); border-color: var(--accent); }
+  .craft-chip svg { width: 10px; height: 10px; opacity: 0.8; }
+  .craft-reset {
+    margin-left: auto;
+    padding: 5px 12px;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(18, 22, 26, 0.6);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .craft-reset:hover { color: var(--accent); border-color: rgba(214, 255, 58, 0.4); }
+
+  .mat-card .mat-icon {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 auto;
+    background: rgba(8, 10, 12, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mat-card .mat-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .mat-card .body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .mat-card .name {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mat-card .qty {
+    font-family: "Oswald", sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  /* ======== HOW TO USE ======== */
+  .howto {
+    background: rgba(18, 22, 26, 0.4);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 28px 32px 32px;
+  }
+  .howto-steps {
+    display: grid;
+    grid-template-columns: 1fr 22px 1fr 22px 1fr 22px 1fr 22px 1fr;
+    align-items: start;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .step .icon {
+    width: 60px;
+    height: 60px;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .step .step-num {
+    font-family: "Oswald", sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .step .step-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .step .step-desc {
+    font-size: 11px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.6);
+  }
+  .step-chev {
+    color: rgba(214,255,58,0.55);
+    align-self: center;
+    margin-top: 28px;
+  }
+  .step-chev svg { width: 18px; height: 18px; }
+
+  /* ======== Modal ======== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .modal-backdrop.is-open {
+    display: flex;
+    opacity: 1;
+  }
+
+  .modal {
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, rgba(28, 34, 40, 0.96) 0%, rgba(14, 18, 22, 0.98) 100%);
+    border: 1px solid rgba(214, 255, 58, 0.4);
+    border-radius: 8px;
+    padding: 30px 36px 26px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 30px rgba(214, 255, 58, 0.12);
+    transform: translateY(8px);
+    transition: transform 0.25s ease;
+  }
+  .modal-backdrop.is-open .modal { transform: translateY(0); }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(8, 10, 12, 0.7);
+    border: 1px solid var(--panel-border);
+    color: rgba(255, 255, 255, 0.65);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .modal-close:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(214, 255, 58, 0.08);
+  }
+  .modal-close svg { width: 14px; height: 14px; }
+
+  .modal-title {
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+    margin-bottom: 8px;
+    padding-right: 44px;
+    line-height: 1.2;
+  }
+  .modal-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: rgba(255, 255, 255, 0.55);
+    font-family: "Oswald", sans-serif;
+  }
+  .modal-subtitle .stars { display: flex; gap: 2px; }
+  .modal-subtitle .stars svg { width: 12px; height: 12px; fill: var(--rarity-6); }
+  .modal-subtitle .class-tag {
+    background: rgba(214, 255, 58, 0.08);
+    border: 1px solid rgba(214, 255, 58, 0.3);
+    color: var(--accent);
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+  }
+
+  .modal-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 10%, rgba(255,255,255,0.18) 90%, transparent);
+    margin: 0 0 22px;
+  }
+
+  .modal-group { margin-bottom: 22px; }
+  .modal-group-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .modal-group-heading::before {
+    content: "";
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .modal-group-heading .en {
+    font-family: "Oswald", sans-serif;
+    font-weight: 300;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: 6px;
+  }
+
+  .checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .check-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(18, 22, 26, 0.6);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    font-size: 13px;
+  }
+  .check-toggle:hover {
+    background: rgba(28, 34, 40, 0.75);
+    border-color: rgba(214, 255, 58, 0.4);
+  }
+  .check-toggle input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .check-toggle .box {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-radius: 3px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .check-toggle .box svg {
+    width: 12px;
+    height: 12px;
+    color: #0a0c0d;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .check-toggle .label {
+    color: rgba(255, 255, 255, 0.85);
+    transition: color 0.2s ease;
+    letter-spacing: 0.04em;
+  }
+  .check-toggle input:checked + .box {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(214, 255, 58, 0.4);
+  }
+  .check-toggle input:checked + .box svg { opacity: 1; }
+  .check-toggle input:checked ~ .label { color: var(--accent); }
+  .check-toggle:has(input:checked) {
+    background: rgba(214, 255, 58, 0.06);
+    border-color: rgba(214, 255, 58, 0.4);
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-top: 18px;
+    margin-top: 6px;
+    border-top: 1px solid var(--panel-border);
+  }
+  .selection-count {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .selection-count strong {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 14px;
+    margin: 0 2px;
+  }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-action {
+    background: rgba(18, 22, 26, 0.6);
+    border: 1px solid var(--panel-border);
+    color: rgba(255, 255, 255, 0.85);
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding: 10px 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  .modal-action:hover {
+    border-color: rgba(214, 255, 58, 0.4);
+    color: var(--accent);
+  }
+  .modal-action.primary {
+    background: var(--accent);
+    color: #0a0c0d;
+    border-color: var(--accent);
+  }
+  .modal-action.primary:hover {
+    background: #e3ff5a;
+    color: #0a0c0d;
+    box-shadow: 0 0 14px rgba(214, 255, 58, 0.45);
+  }
+
+  /* 加工レシピ置き換えの確認ダイアログ */
+  .modal.modal--compact { max-width: 460px; padding: 26px 28px 22px; }
+  .modal--compact .modal-title { font-size: 20px; margin-bottom: 14px; }
+  .craft-lead {
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 14px;
+  }
+  .craft-lead strong { color: var(--accent); font-weight: 700; }
+  .recipe-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .recipe-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: rgba(8, 10, 12, 0.55);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+  }
+  .recipe-row .mat-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    background: rgba(8, 10, 12, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .recipe-row .mat-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .recipe-row .name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .recipe-row .calc {
+    flex: 0 0 auto;
+    font-family: "Oswald", sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+  }
+  .recipe-row .calc strong {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-left: 4px;
+  }
+  .craft-note {
+    font-size: 11px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 4px;
+  }
+
+  /* selection badge on cards */
+  .op-card .op-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: var(--accent);
+    color: #0a0c0d;
+    font-family: "Oswald", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 8px rgba(214, 255, 58, 0.5);
+    z-index: 2;
+  }
+  .op-card.is-active .op-badge { display: flex; }
+
+  /* ======== Floating "jump to materials" button ======== */
+  .jump-to-mats {
+    position: fixed;
+    top: 50%;
+    right: 22px;
+    /* hidden state: nudged outward, slightly shrunk, softly blurred */
+    transform: translateY(-50%) translateX(28px) scale(0.94);
+    z-index: 40;
+    opacity: 0;
+    filter: blur(2px);
+    pointer-events: none;
+    /* Promote to its own compositor layer so opacity / transform animate
+       on the GPU and don't trigger layout/paint mid-transition. */
+    will-change: opacity, transform, filter;
+    /* Symmetric ease-in-out so fade-in AND fade-out feel identical and
+       neither "snaps" at the start. */
+    transition:
+      opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 1.5s cubic-bezier(0.4, 0, 0.2, 1),
+      filter 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .jump-to-mats.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(-50%) translateX(0) scale(1);
+    filter: blur(0);
+  }
+
+  .jump-to-mats-frame {
+    --cut: 12px;
+    display: block;
+    padding: 1px;
+    background: var(--accent);
+    clip-path: polygon(
+      var(--cut) 0,
+      calc(100% - var(--cut)) 0,
+      100% var(--cut),
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      var(--cut) 100%,
+      0 calc(100% - var(--cut)),
+      0 var(--cut)
+    );
+    filter: drop-shadow(0 0 10px rgba(214, 255, 58, 0.35));
+    transition: filter 0.25s ease, transform 0.25s ease;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+  }
+  .jump-to-mats-frame:hover {
+    filter: drop-shadow(0 0 16px var(--accent-glow));
+  }
+
+  .jump-to-mats-inner {
+    --cut: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 14px 12px;
+    width: 86px;
+    background: rgba(8, 10, 12, 0.92);
+    color: var(--accent);
+    clip-path: polygon(
+      var(--cut) 0,
+      calc(100% - var(--cut)) 0,
+      100% var(--cut),
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      var(--cut) 100%,
+      0 calc(100% - var(--cut)),
+      0 var(--cut)
+    );
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .jump-to-mats-frame:hover .jump-to-mats-inner {
+    background: var(--accent);
+    color: #0a0c0d;
+  }
+
+  .jump-to-mats-icon {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+  }
+  .jump-to-mats-label {
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .jump-to-mats-en {
+    display: block;
+    font-family: "Oswald", sans-serif;
+    font-weight: 300;
+    font-size: 8px;
+    letter-spacing: 0.32em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+  }
+  .jump-to-mats-frame:hover .jump-to-mats-en {
+    color: rgba(10, 12, 13, 0.7);
+  }
+
+  .jump-to-mats-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 22px;
+    padding: 0 7px;
+    margin-top: 2px;
+    background: var(--accent);
+    color: #0a0c0d;
+    font-family: "Oswald", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--accent-glow);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .jump-to-mats-frame:hover .jump-to-mats-count {
+    background: rgba(10, 12, 13, 0.92);
+    color: var(--accent);
+    box-shadow: 0 0 10px rgba(10, 12, 13, 0.6);
+  }
+
+  /* ======== Responsive ======== */
+  @media (max-width: 880px) {
+    .page { padding: 22px 22px 40px; }
+    .title-section { grid-template-columns: 1fr; gap: 24px; }
+    .rhodes-art { height: 200px; }
+    .class-tabs { grid-template-columns: repeat(4, 1fr); }
+    .howto-steps {
+      grid-template-columns: 1fr;
+    }
+    .step-chev { display: none; }
+    .step { padding: 14px 0; border-bottom: 1px solid var(--panel-border); }
+    .step:last-child { border-bottom: none; }
+    .header { gap: 12px; }
+    .back-btn { padding: 9px 18px; font-size: 13px; }
+    .modal { padding: 24px 22px 22px; }
+    .modal-title { font-size: 22px; padding-right: 40px; }
+    .materials-body { padding: 16px 14px 18px; }
+  }
+  @media (max-width: 880px) {
+    .jump-to-mats { right: 14px; }
+    .jump-to-mats-inner { width: 76px; padding: 12px 10px 10px; }
+    .jump-to-mats-icon { width: 22px; height: 22px; }
+    .jump-to-mats-label { font-size: 10px; }
+    .jump-to-mats-en { font-size: 7px; letter-spacing: 0.28em; }
+    .jump-to-mats-count { min-width: 26px; height: 20px; font-size: 12px; }
+  }
+  @media (max-width: 540px) {
+    .page { padding: 18px 14px 32px; }
+    .rarity-tabs { grid-template-columns: repeat(3, 1fr); }
+    .class-tabs { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .class-tab { padding: 10px 2px 8px; }
+    .class-tab .class-name { font-size: 11px; }
+    .class-tab .class-en { font-size: 8px; letter-spacing: 0.18em; }
+    .operator-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+    .brand-name { font-size: 20px; letter-spacing: 0.14em; }
+    .brand-sub { font-size: 9px; margin-left: 0; }
+    .brand-mark { height: 28px; }
+    .header { flex-wrap: wrap; }
+    .page-title { font-size: clamp(40px, 13vw, 64px); margin-bottom: 22px; }
+    .section-heading { font-size: 15px; }
+    .section-heading.section-heading-sub { font-size: 14px; margin-top: 22px; }
+    .section-notice { padding: 12px 14px; font-size: 12px; line-height: 1.65; }
+    .section-notice .notice-label { display: block; margin: 0 0 6px; }
+    .section-notice p + p { font-size: 11px; }
+    .lead { font-size: 13px; }
+    .mat-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .mat-card { padding: 7px 9px; gap: 10px; }
+    .mat-card .mat-icon { width: 42px; height: 42px; }
+    .mat-card .qty { font-size: 18px; }
+    .modal { padding: 22px 18px 20px; border-radius: 6px; }
+    .modal-title { font-size: 20px; padding-right: 36px; }
+    .modal-footer { flex-wrap: wrap; gap: 10px; }
+    .modal-actions { width: 100%; justify-content: stretch; }
+    .modal-action { flex: 1; padding: 10px 14px; }
+  }
+  @media (max-width: 540px) {
+    .jump-to-mats {
+      top: auto;
+      bottom: 18px;
+      right: 14px;
+      transform: translateY(28px) scale(0.92);
+    }
+    .jump-to-mats.is-visible { transform: translateY(0) scale(1); }
+    .jump-to-mats-inner { width: 68px; padding: 10px 8px 8px; gap: 4px; }
+    .jump-to-mats-icon { width: 20px; height: 20px; }
+    .jump-to-mats-count { height: 18px; min-width: 24px; font-size: 11px; }
+  }
+  @media (max-width: 380px) {
+    .rarity-tabs { gap: 6px; }
+    .rarity-tab { padding: 10px 4px 8px; }
+    .rarity-tab .star-row { font-size: 18px; }
+    .class-tabs { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .operator-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+    .op-name { font-size: 11px; }
+    .modal-subtitle { gap: 8px; }
+    .check-toggle { padding: 9px 10px; font-size: 12px; }
+  }
+  /* iOS safe-area padding for notched devices */
+  @supports (padding: max(0px)) {
+    body { padding-bottom: env(safe-area-inset-bottom); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="bg-stage" aria-hidden="true"></div>
+<div class="bg-overlay scanlines" aria-hidden="true"></div>
+<div class="bg-overlay grain" aria-hidden="true"></div>
+
+<!-- Corner crosshairs -->
+<span class="cross tl"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+<span class="cross tr"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+<span class="cross bl"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+<span class="cross br"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+
+<!-- SVG defs for gradients reused in star rendering -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="halfgrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="50%" stop-color="#ffc83a"/>
+      <stop offset="50%" stop-color="rgba(255,255,255,0.15)"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <!-- ===== Header ===== -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-row">
+        <span class="brand-mark" aria-hidden="true">
+          <img src="assets/brand.png" alt="" />
+        </span>
+        <span class="brand-name">ARKNIGHTS</span>
+      </div>
+      <span class="brand-sub">MATERIALS COUNTER</span>
+    </div>
+  </header>
+
+  <!-- ===== Title section ===== -->
+  <section class="title-section">
+    <div class="title-left">
+      <h1 class="page-title">
+        SELECT<br>OPERATOR<span class="dot-accent">.</span>
+      </h1>
+      <h2 class="overview-label">本ツールの概要</h2>
+      <p class="overview-text">
+        アークナイツのオペレーター育成に必要な素材をカウントし、<br>
+        効率的な育成計画をサポートするツールです。
+      </p>
+    </div>
+    <div class="title-right">
+      <div class="rhodes-art" aria-hidden="true">
+        <!-- diagonal accent streaks behind the silhouette -->
+        <svg class="rhodes-streaks" viewBox="0 0 400 280" preserveAspectRatio="none" fill="none">
+          <defs>
+            <linearGradient id="rs1" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#d6ff3a" stop-opacity="0"/>
+              <stop offset="0.5" stop-color="#d6ff3a" stop-opacity="0.6"/>
+              <stop offset="1" stop-color="#d6ff3a" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="rs2" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#b06bff" stop-opacity="0"/>
+              <stop offset="0.5" stop-color="#b06bff" stop-opacity="0.5"/>
+              <stop offset="1" stop-color="#b06bff" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="rs3" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#4ad6ff" stop-opacity="0"/>
+              <stop offset="0.5" stop-color="#4ad6ff" stop-opacity="0.55"/>
+              <stop offset="1" stop-color="#4ad6ff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line x1="40" y1="80"  x2="180" y2="40"  stroke="url(#rs1)" stroke-width="1.2"/>
+          <line x1="60" y1="120" x2="220" y2="80"  stroke="url(#rs2)" stroke-width="1"/>
+          <line x1="80" y1="160" x2="260" y2="120" stroke="url(#rs3)" stroke-width="1"/>
+          <line x1="100" y1="200" x2="240" y2="170" stroke="url(#rs1)" stroke-width="0.8" opacity="0.55"/>
+        </svg>
+
+        <!-- Rhodes Island logo (transparent banner) -->
+        <img class="tower" src="assets/rhodes.png" alt="" aria-hidden="true" />
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- ===== Operator selection ===== -->
+  <section class="operator-section">
+    <h2 class="section-heading">オペレーター選択</h2>
+
+    <div class="section-notice" role="note">
+      <p>
+        <span class="notice-label">NOTICE</span>本ページはドクター個人で運用しているため、情報の更新が遅れる場合があります。
+      </p>
+      <p>※特に大陸版で先行実装された最新オペレーターについては、素材データの掲載・更新が後追いとなる場合があります。</p>
+    </div>
+
+    <!-- Rarity tabs -->
+    <div class="rarity-tabs" id="rarityTabs" role="tablist">
+      <button class="rarity-tab is-active" data-rarity="6" role="tab" aria-selected="true">
+        <span class="star-row">
+          <svg viewBox="0 0 16 16"><path d="M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z"/></svg>
+          6
+        </span>
+        <span class="label">6-STAR</span>
+      </button>
+      <button class="rarity-tab" data-rarity="5" role="tab">
+        <span class="star-row">
+          <svg viewBox="0 0 16 16"><path d="M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z"/></svg>
+          5
+        </span>
+        <span class="label">5-STAR</span>
+      </button>
+      <button class="rarity-tab" data-rarity="4" role="tab">
+        <span class="star-row">
+          <svg viewBox="0 0 16 16"><path d="M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z"/></svg>
+          4
+        </span>
+        <span class="label">4-STAR</span>
+      </button>
+      <button class="rarity-tab" data-rarity="3" role="tab">
+        <span class="star-row">
+          <svg viewBox="0 0 16 16"><path d="M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z"/></svg>
+          3
+        </span>
+        <span class="label">3-STAR</span>
+      </button>
+      <button class="rarity-tab" data-rarity="2" role="tab">
+        <span class="star-row">
+          <svg viewBox="0 0 16 16"><path d="M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z"/></svg>
+          2
+        </span>
+        <span class="label">2-STAR</span>
+      </button>
+      <button class="rarity-tab" data-rarity="1" role="tab">
+        <span class="star-row">
+          <svg viewBox="0 0 16 16"><path d="M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z"/></svg>
+          1
+        </span>
+        <span class="label">1-STAR</span>
+      </button>
+    </div>
+
+    <h3 class="section-heading section-heading-sub">職業を選択 <span class="muted">BY PROFESSION</span></h3>
+
+    <div class="class-tabs" id="classTabs" role="tablist">
+      <button class="class-tab" type="button" data-prof="vanguard" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/vanguard.png" alt="" /></span>
+        <span class="class-name">先鋒</span>
+        <span class="class-en">VANGUARD</span>
+      </button>
+      <button class="class-tab" type="button" data-prof="guard" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/guard.png" alt="" /></span>
+        <span class="class-name">前衛</span>
+        <span class="class-en">GUARD</span>
+      </button>
+      <button class="class-tab" type="button" data-prof="defender" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/defender.png" alt="" /></span>
+        <span class="class-name">重装</span>
+        <span class="class-en">DEFENDER</span>
+      </button>
+      <button class="class-tab" type="button" data-prof="sniper" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/sniper.png" alt="" /></span>
+        <span class="class-name">狙撃</span>
+        <span class="class-en">SNIPER</span>
+      </button>
+      <button class="class-tab" type="button" data-prof="caster" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/caster.png" alt="" /></span>
+        <span class="class-name">術師</span>
+        <span class="class-en">CASTER</span>
+      </button>
+      <button class="class-tab" type="button" data-prof="medic" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/medic.png" alt="" /></span>
+        <span class="class-name">医療</span>
+        <span class="class-en">MEDIC</span>
+      </button>
+      <button class="class-tab" type="button" data-prof="supporter" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/supporter.png" alt="" /></span>
+        <span class="class-name">補助</span>
+        <span class="class-en">SUPPORTER</span>
+      </button>
+      <button class="class-tab" type="button" data-prof="specialist" role="tab" aria-selected="false">
+        <span class="class-icon"><img src="assets/job_types/specialist.png" alt="" /></span>
+        <span class="class-name">特殊</span>
+        <span class="class-en">SPECIALIST</span>
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="7" cy="7" r="5"/>
+        <path d="M11 11 L14 14"/>
+      </svg>
+      <input class="search-input" id="searchInput" type="text" placeholder="オペレーター名で検索" />
+    </div>
+
+    <!-- Sort toggle + data update info -->
+    <div class="sort-bar">
+      <div class="sort-group" id="sortGroup" role="radiogroup" aria-label="並び順">
+        <span class="sort-label">SORT</span>
+        <button class="sort-btn is-active" type="button" data-sort="new" role="radio" aria-checked="true">実装が新しい順</button>
+        <button class="sort-btn" type="button" data-sort="old" role="radio" aria-checked="false">実装が古い順</button>
+        <button class="sort-btn" type="button" data-sort="name" role="radio" aria-checked="false">五十音順</button>
+      </div>
+      <p class="data-info" id="dataInfo"></p>
+    </div>
+
+    <!-- Operator grid -->
+    <div class="operator-grid" id="operatorGrid"></div>
+
+    <!-- Clear -->
+    <div class="clear-wrap">
+      <button class="clear-btn" id="clearBtn">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 8 A6 6 0 1 0 4 4"/>
+          <path d="M4 1 L4 4 L7 4"/>
+        </svg>
+        選択をクリア
+      </button>
+    </div>
+  </section>
+
+  <!-- ===== Selection summary ===== -->
+  <section class="summary-section">
+    <h2 class="section-heading">
+      選択中の育成項目
+      <span class="muted">SELECTION SUMMARY</span>
+      <span class="summary-count" aria-live="polite"><strong id="summaryOpCount">0</strong>OP / <strong id="summaryItemCount">0</strong>項目</span>
+    </h2>
+
+    <div class="summary-empty" id="summaryEmpty">
+      オペレーターを選択して育成項目を設定すると、ここに一覧表示されます。
+    </div>
+
+    <div class="summary-table-wrap" id="summaryTableWrap" hidden>
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th class="col-op">オペレーター</th>
+            <th class="col-promo">昇進</th>
+            <th class="col-skill">スキル特化</th>
+            <th class="col-module">モジュール</th>
+            <th class="col-count">計</th>
+            <th class="col-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== Required materials summary ===== -->
+  <section class="materials-section" id="materialsSection">
+    <h2 class="section-heading">
+      必要素材合計
+      <span class="muted">REQUIRED MATERIALS</span>
+      <span class="summary-count" aria-live="polite"><strong id="matTypeCount">0</strong>種類</span>
+    </h2>
+
+    <div class="summary-empty" id="matEmpty">
+      育成項目を選択すると、必要な素材の合計が集計されます。
+    </div>
+
+    <div class="materials-body" id="matBody" hidden></div>
+  </section>
+
+  <!-- ===== HOW TO USE ===== -->
+  <section class="howto">
+    <h2 class="section-heading">本ツールの使用方法 <span class="muted">HOW TO USE</span></h2>
+    <div class="howto-steps">
+      <div class="step">
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="28" cy="22" r="8"/>
+          <path d="M14 50 C14 40 20 34 28 34 C36 34 42 40 42 50"/>
+          <circle cx="46" cy="46" r="9"/>
+          <path d="M42 46 L45 49 L51 43"/>
+        </svg>
+        <div class="step-num">STEP 01</div>
+        <div class="step-title">オペレーターを選択</div>
+        <p class="step-desc">育成に必要な素材を集計したい<br>オペレーターを選びます。</p>
+      </div>
+      <span class="step-chev"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 L13 9 L6 15"/></svg></span>
+
+      <div class="step">
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 52 L14 38 M9 43 L14 38 L19 43"/>
+          <path d="M32 52 L32 28 M27 33 L32 28 L37 33"/>
+          <path d="M50 52 L50 18 M45 23 L50 18 L55 23"/>
+          <path d="M8 58 L56 58"/>
+        </svg>
+        <div class="step-num">STEP 02</div>
+        <div class="step-title">育成項目を選択</div>
+        <p class="step-desc">育てたいスキル／モジュール／<br>昇進の項目を選びます。</p>
+      </div>
+      <span class="step-chev"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 L13 9 L6 15"/></svg></span>
+
+      <div class="step">
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="10" y="22" width="18" height="22" rx="1"/>
+          <path d="M10 28 L28 28"/>
+          <path d="M19 22 L19 28"/>
+          <rect x="34" y="32" width="14" height="14" rx="1"/>
+          <path d="M34 36 L48 36"/>
+          <path d="M41 32 L41 36"/>
+          <rect x="50" y="38" width="10" height="10" rx="1"/>
+        </svg>
+        <div class="step-num">STEP 03</div>
+        <div class="step-title">素材を自動で集計</div>
+        <p class="step-desc">レベル・昇進・スキル育成に必要な<br>素材を自動で計算します。</p>
+      </div>
+      <span class="step-chev"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 L13 9 L6 15"/></svg></span>
+
+      <div class="step">
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="32" cy="32" r="20"/>
+          <path d="M22 22 L42 42"/>
+        </svg>
+        <div class="step-num">STEP 04</div>
+        <div class="step-title">結果を確認</div>
+        <p class="step-desc">必要な素材の合計数をティア順に確認。<br>加工できる素材は下位素材に置き換えられます。</p>
+      </div>
+      <span class="step-chev"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 L13 9 L6 15"/></svg></span>
+
+      <div class="step">
+        <svg class="icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="14" y="10" width="36" height="46" rx="2"/>
+          <path d="M22 22 L26 26 L34 18"/>
+          <path d="M22 36 L26 40 L34 32"/>
+          <path d="M22 50 L26 54 L34 46"/>
+          <path d="M40 22 L46 22 M40 36 L46 36 M40 50 L46 50"/>
+        </svg>
+        <div class="step-num">STEP 05</div>
+        <div class="step-title">計画的に育成</div>
+        <p class="step-desc">不足素材がひと目でわかり、<br>効率よく育成が進められます。</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== Floating jump-to-materials button (follows scroll) ===== -->
+<button class="jump-to-mats-frame jump-to-mats" id="jumpToMats" type="button" aria-label="必要素材合計セクションへ移動">
+  <span class="jump-to-mats-inner">
+    <svg class="jump-to-mats-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 10 L16 5 L26 10 L26 22 L16 27 L6 22 Z"/>
+      <path d="M6 10 L16 15 L26 10"/>
+      <path d="M16 15 L16 27"/>
+    </svg>
+    <span class="jump-to-mats-label">
+      必要素材
+      <span class="jump-to-mats-en">MATERIALS</span>
+    </span>
+    <span class="jump-to-mats-count" id="jumpToMatsCount">0</span>
+  </span>
+</button>
+
+<!-- ===== Operator detail modal ===== -->
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modalClose" type="button" aria-label="閉じる">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M2 2 L12 12 M12 2 L2 12"/>
+      </svg>
+    </button>
+
+    <h3 class="modal-title" id="modalTitle">オペレーター名</h3>
+    <div class="modal-subtitle">
+      <span class="class-tag" id="modalClass">先鋒</span>
+      <span class="stars" id="modalStars" aria-hidden="true"></span>
+      <span id="modalRarity">★6</span>
+    </div>
+
+    <hr class="modal-divider" />
+
+    <!-- groups are rendered dynamically per operator rarity -->
+    <div id="modalBody"></div>
+
+    <div class="modal-footer">
+      <span class="selection-count" id="modalCount"><strong>0</strong>項目を選択中</span>
+      <div class="modal-actions">
+        <button class="modal-action" id="modalReset" type="button">リセット</button>
+        <button class="modal-action primary" id="modalDone" type="button">決定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Crafting (加工レシピ) confirm dialog ===== -->
+<div class="modal-backdrop" id="craftBackdrop" role="dialog" aria-modal="true" aria-labelledby="craftTitle" hidden>
+  <div class="modal modal--compact">
+    <button class="modal-close" id="craftClose" type="button" aria-label="閉じる">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M2 2 L12 12 M12 2 L2 12"/>
+      </svg>
+    </button>
+    <h3 class="modal-title" id="craftTitle">加工レシピに置き換え</h3>
+    <p class="craft-lead" id="craftLead"></p>
+    <ul class="recipe-list" id="craftList"></ul>
+    <p class="craft-note" id="craftNote"></p>
+    <div class="modal-footer">
+      <span class="selection-count"></span>
+      <div class="modal-actions">
+        <button class="modal-action" id="craftCancel" type="button">キャンセル</button>
+        <button class="modal-action primary" id="craftOk" type="button">置き換える</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Operator data is generated by `python manage.py dump_operators`
+     and lives at assets/operators.js. It defines window.OPERATORS. -->
+<script src="assets/operators.js"></script>
+
+<script>
+/* ============================================================
+ * Operator data — pulled from window.OPERATORS (auto-generated
+ * from the Django DB). Each entry has:
+ *   { id, name, rarity, stars, class, classKey, branch,
+ *     order, released, cnReleased, isNew }
+ * order = implementation order (JP release order, then CN-only
+ * operators by CN release date); isNew = first appeared in the
+ * latest monthly update (window.DATA_INFO.updated).
+ * Place 180x180 PNGs at assets/operators/{id}.png to show
+ * portraits; missing files fall back to the placeholder SVG.
+ * ============================================================ */
+const OPERATORS = Array.isArray(window.OPERATORS) ? window.OPERATORS : [];
+const DATA_INFO = window.DATA_INFO || {};
+
+/* Japanese locale-aware collator for 50音 (gojuon) ordering of operator names.
+   Uses ICU's ja locale so katakana / hiragana / kanji-mixed names sort like
+   a Japanese phone book (ア → イ → ウ → ...). */
+const JA_COLLATOR = new Intl.Collator('ja', { sensitivity: 'base' });
+
+/* Implementation-order comparator. dir = -1 → newest first, 1 → oldest first.
+   Operators without an order (not in the registry) always go last. */
+function byRelease(dir) {
+  return (a, b) => {
+    const am = typeof a.order !== 'number';
+    const bm = typeof b.order !== 'number';
+    if (am || bm) return (am - bm) || JA_COLLATOR.compare(a.name, b.name);
+    return dir * (a.order - b.order);
+  };
+}
+const SORTERS = {
+  new: byRelease(-1),
+  old: byRelease(1),
+  name: (a, b) => JA_COLLATOR.compare(a.name, b.name),
+};
+const SORT_STORAGE_KEY = 'select_plan.sort';
+
+function loadSort() {
+  try {
+    const v = localStorage.getItem(SORT_STORAGE_KEY);
+    return SORTERS[v] ? v : 'new';
+  } catch (_) {
+    return 'new';
+  }
+}
+function saveSort(v) {
+  try { localStorage.setItem(SORT_STORAGE_KEY, v); } catch (_) { /* storage unavailable */ }
+}
+
+function fmtDate(iso) {
+  return iso ? iso.replace(/-/g, '/') : '';
+}
+function releaseLabel(op) {
+  if (op.released) return `国内実装 ${fmtDate(op.released)}`;
+  if (op.cnReleased) return `国内未実装（大陸実装 ${fmtDate(op.cnReleased)}）`;
+  return '';
+}
+
+/* ----- DOM helpers ----- */
+const grid = document.getElementById('operatorGrid');
+const search = document.getElementById('searchInput');
+const tabs = document.querySelectorAll('#rarityTabs .rarity-tab');
+const classTabs = document.querySelectorAll('#classTabs .class-tab');
+const clearBtn = document.getElementById('clearBtn');
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalCloseBtn = document.getElementById('modalClose');
+const modalDoneBtn = document.getElementById('modalDone');
+const modalResetBtn = document.getElementById('modalReset');
+const modalTitle = document.getElementById('modalTitle');
+const modalClass = document.getElementById('modalClass');
+const modalStars = document.getElementById('modalStars');
+const modalRarity = document.getElementById('modalRarity');
+const modalCount = document.getElementById('modalCount');
+const modalBody = document.getElementById('modalBody');
+const modalChecks = () => modalBody.querySelectorAll('input[type="checkbox"]');
+
+const STAR_PATH = 'M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z';
+
+/* selection: Map<operatorId, Set<itemKey>> — each operator keeps its own check state */
+const selections = new Map();
+
+const state = {
+  rarity: 6,
+  query: '',
+  profession: '',  // active profession filter — classKey like 'vanguard' ('' = no filter)
+  sort: loadSort(), // 'new' | 'old' | 'name'
+  modalOpId: null, // which operator the modal is currently editing
+};
+
+function classIcon(key) {
+  // Per-operator class badge — uses the same PNG icons as the class tabs.
+  return `<img src="assets/job_types/${key}.png" alt="" />`;
+}
+
+function starsRow(_stars, rarity) {
+  // Render exactly `rarity` filled stars — no grey/empty placeholders.
+  let html = '';
+  for (let i = 0; i < rarity; i++) {
+    html += `<svg viewBox="0 0 16 16" class="full"><path d="${STAR_PATH}"/></svg>`;
+  }
+  return `<div class="op-stars" data-rarity="${rarity}">${html}</div>`;
+}
+
+function imgFor(op) {
+  const src = `assets/operators/${op.id}.png`;
+  const fallback = 'assets/operators/_placeholder.svg';
+  return `<img src="${src}" alt="${op.name}" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'" />`;
+}
+
+function selectionCount(opId) {
+  const set = selections.get(opId);
+  return set ? set.size : 0;
+}
+
+function cardHtml(op) {
+  const count = selectionCount(op.id);
+  const active = count > 0 ? ' is-active' : '';
+  const isNew = op.isNew ? ' is-new' : '';
+  const release = releaseLabel(op);
+  return `
+    <div class="op-card${active}${isNew}" data-id="${op.id}" tabindex="0" role="button" aria-pressed="${count > 0}"${release ? ` title="${release}"` : ''}>
+      ${op.isNew ? '<span class="op-new-tag" aria-label="新規追加">NEW</span>' : ''}
+      <span class="op-badge" aria-label="${count}項目選択中">${count}</span>
+      <div class="op-portrait">
+        ${imgFor(op)}
+        <span class="op-class" title="${op.class}">${classIcon(op.classKey)}</span>
+        <span class="op-class-label">${op.class}</span>
+      </div>
+      <div class="op-name">${op.name}</div>
+      ${starsRow(op.stars, op.rarity)}
+    </div>
+  `;
+}
+
+function refreshCard(opId) {
+  const card = grid.querySelector(`.op-card[data-id="${opId}"]`);
+  if (!card) return;
+  const count = selectionCount(opId);
+  const badge = card.querySelector('.op-badge');
+  if (badge) badge.textContent = count;
+  card.classList.toggle('is-active', count > 0);
+  card.setAttribute('aria-pressed', count > 0);
+}
+
+/* ----- Material master + summary ----- */
+const MATERIALS = (typeof window !== 'undefined' && window.MATERIALS) ? window.MATERIALS : {};
+/* 加工レシピ: { <slug>: { inputs: { <slug>: 1 個あたりの個数 } } }（下位素材からの加工のみ） */
+const RECIPES = (typeof window !== 'undefined' && window.RECIPES) ? window.RECIPES : {};
+/* 「加工に置き換える」と選ばれた素材の slug。選択を変えても保持し、「すべてクリア」で消す */
+const crafted = new Set();
+
+/* Display groups in the required-materials panel.
+ * - 龍門幣 / SoC / アーツ学 / モジュール are dedicated buckets.
+ * - 必要素材 is the catch-all for everything else (chips, base mats, skill mats, etc).
+ */
+const MAT_CATEGORY_LABEL = {
+  currency:    ['龍門幣',    'LMD'],
+  soc:         ['SoC',        'SoC'],
+  exp:         ['アーツ学',   'EXP'],
+  module_data: ['モジュール', 'MODULE'],
+  base:        ['必要素材',   'MATERIAL'],
+};
+const MAT_CATEGORY_ORDER = ['currency', 'soc', 'exp', 'module_data', 'base'];
+
+/* ----- Selection summary table ----- */
+const summaryEmpty = document.getElementById('summaryEmpty');
+const summaryTableWrap = document.getElementById('summaryTableWrap');
+const summaryBody = document.getElementById('summaryBody');
+const summaryOpCount = document.getElementById('summaryOpCount');
+const summaryItemCount = document.getElementById('summaryItemCount');
+
+const matEmpty = document.getElementById('matEmpty');
+const matBody  = document.getElementById('matBody');
+const matTypeCount  = document.getElementById('matTypeCount');
+const jumpToMats      = document.getElementById('jumpToMats');
+const jumpToMatsCount = document.getElementById('jumpToMatsCount');
+
+function chipsHtml(arr) {
+  if (!arr.length) return '<span class="chip-empty">—</span>';
+  return arr.map((n) => `<span class="chip">${n}</span>`).join('');
+}
+
+function moduleChipsHtml(set) {
+  // returns chips for each selected module-{slot}-{level} entry, grouped by slot
+  const pairs = [];
+  set.forEach((key) => {
+    const p = key.split('-');
+    if (p[0] === 'module' && p.length === 3) {
+      pairs.push({ slot: parseInt(p[1], 10), level: parseInt(p[2], 10) });
+    }
+  });
+  if (!pairs.length) return '<span class="chip-empty">—</span>';
+  pairs.sort((a, b) => (a.slot - b.slot) || (a.level - b.level));
+  return pairs.map((p) => `<span class="chip">M${p.slot}·${p.level}</span>`).join('');
+}
+
+function skillChipsHtml(set) {
+  // returns chips for each selected skill-{skillNo}-{masteryLevel} entry
+  const pairs = [];
+  set.forEach((key) => {
+    const p = key.split('-');
+    if (p[0] === 'skill' && p.length === 3) {
+      pairs.push({ skill: parseInt(p[1], 10), level: parseInt(p[2], 10) });
+    }
+  });
+  if (!pairs.length) return '<span class="chip-empty">—</span>';
+  pairs.sort((a, b) => (a.skill - b.skill) || (a.level - b.level));
+  return pairs.map((p) => `<span class="chip">S${p.skill}·${p.level}</span>`).join('');
+}
+
+function selectedLevels(set, prefix, max) {
+  const out = [];
+  for (let n = 1; n <= max; n++) if (set.has(`${prefix}-${n}`)) out.push(n);
+  return out;
+}
+
+function renderSummary() {
+  const ids = OPERATORS.map((o) => o.id).filter((id) => selections.has(id));
+  const opCount = ids.length;
+  let totalItems = 0;
+
+  if (opCount === 0) {
+    summaryEmpty.hidden = false;
+    summaryTableWrap.hidden = true;
+    summaryBody.innerHTML = '';
+    summaryOpCount.textContent = '0';
+    summaryItemCount.textContent = '0';
+    return;
+  }
+
+  let rows = '';
+  ids.forEach((id) => {
+    const op = OPERATORS.find((o) => o.id === id);
+    const set = selections.get(id);
+    totalItems += set.size;
+    const promo = selectedLevels(set, 'promotion', 2);
+
+    rows += `<tr data-id="${id}" tabindex="0" role="button" aria-label="${op.name}を編集">
+      <td>
+        <div class="op-cell">
+          <div class="op-thumb">
+            <img src="assets/operators/${id}.png" alt=""
+                 onerror="this.onerror=null;this.src='assets/operators/_placeholder.svg'">
+          </div>
+          <div class="op-meta">
+            <div class="name">${op.name}</div>
+            <div class="meta">★${op.rarity} · ${op.class}</div>
+          </div>
+        </div>
+      </td>
+      <td><div class="chips">${chipsHtml(promo)}</div></td>
+      <td><div class="chips">${skillChipsHtml(set)}</div></td>
+      <td><div class="chips">${moduleChipsHtml(set)}</div></td>
+      <td class="count">${set.size}<span class="unit">項目</span></td>
+      <td class="actions">
+        <button class="row-action" type="button" data-action="edit" title="編集" aria-label="編集">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 11 L11 2 L13 4 L4 13 L2 13 Z"/>
+          </svg>
+        </button>
+        <button class="row-action" type="button" data-action="remove" title="削除" aria-label="削除">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M3 3 L11 11 M11 3 L3 11"/>
+          </svg>
+        </button>
+      </td>
+    </tr>`;
+  });
+
+  summaryBody.innerHTML = rows;
+  summaryEmpty.hidden = true;
+  summaryTableWrap.hidden = false;
+  summaryOpCount.textContent = opCount;
+  summaryItemCount.textContent = totalItems;
+}
+
+/* ----- Material aggregation ----- */
+
+/* Map a modal item key (e.g. 'skill-2') to the growth-step codes used in op.costs.
+ * - promotion-N → ['promotion_N']
+ * - skill-N     → ['skill_X_mastery_N' for each of the op's skills]
+ * - module-N    → ['module_S_<stage>' for each of the op's modules that has that stage]
+ */
+function expandItem(itemKey, op) {
+  const parts = itemKey.split('-');
+  const kind = parts[0];
+  if (kind === 'promotion') return [`promotion_${parts[1]}`];
+  if (kind === 'skill') {
+    // New format: skill-{skillNo}-{masteryLevel}
+    const skillNo = parseInt(parts[1], 10);
+    const lv      = parseInt(parts[2], 10);
+    return [`skill_${skillNo}_mastery_${lv}`];
+  }
+  if (kind === 'module') {
+    // module-{slot}-{level} → module_{slot}_{stage}
+    const slot  = parseInt(parts[1], 10);
+    const level = parseInt(parts[2], 10);
+    const stage = MODULE_STAGE_BY_LEVEL[level - 1];
+    if (!stage) return [];
+    return [`module_${slot}_${stage}`];
+  }
+  return [];
+}
+
+function computeTotals() {
+  const totals = {}; // slug -> qty
+  selections.forEach((items, opId) => {
+    const op = OPERATORS.find((o) => o.id === opId);
+    if (!op || !op.costs) return;
+    items.forEach((item) => {
+      expandItem(item, op).forEach((key) => {
+        const stepCosts = op.costs[key];
+        if (!stepCosts) return;
+        Object.entries(stepCosts).forEach(([slug, qty]) => {
+          totals[slug] = (totals[slug] || 0) + qty;
+        });
+      });
+    });
+  });
+  return totals;
+}
+
+const fmtNum = (n) => n.toLocaleString('ja-JP');
+
+function matMeta(slug) {
+  return MATERIALS[slug] || { name: slug, category: 'unknown', tier: 0 };
+}
+
+/* 品質（ティア）の高い順 → Wiki アイテム一覧の掲載順。龍門幣は最後 */
+function compareMaterials(a, b) {
+  const ma = matMeta(a), mb = matMeta(b);
+  return ((ma.category === 'currency') - (mb.category === 'currency'))
+    || ((mb.tier || 0) - (ma.tier || 0))
+    || ((ma.order ?? 9999) - (mb.order ?? 9999))
+    || ma.name.localeCompare(mb.name, 'ja');
+}
+
+/* 加工に置き換え中の素材を、加工レシピの材料（下位素材）に展開する。
+ * 材料もまた置き換え中なら、さらにその材料へ展開する（レシピは常に下位素材からの加工なので必ず止まる）。
+ * 戻り値: { totals: 展開後の slug → 個数, applied: 置き換えた slug → 個数 } */
+function applyCrafting(base) {
+  const totals = { ...base };
+  const applied = {};
+  for (let guard = 0; guard < 1000; guard++) {
+    const slug = Object.keys(totals).find((s) => crafted.has(s) && RECIPES[s] && totals[s] > 0);
+    if (!slug) break;
+    const qty = totals[slug];
+    delete totals[slug];
+    applied[slug] = (applied[slug] || 0) + qty;
+    Object.entries(RECIPES[slug].inputs).forEach(([s, per]) => {
+      totals[s] = (totals[s] || 0) + per * qty;
+    });
+  }
+  return { totals, applied };
+}
+
+function craftBarHtml(applied, hasCraftable) {
+  if (!hasCraftable && crafted.size === 0) return '';
+  const chips = [...crafted].sort(compareMaterials).map((slug) => {
+    const n = applied[slug] || 0;
+    return `<button type="button" class="craft-chip" data-uncraft="${slug}" title="クリックで元に戻す">
+      ${matMeta(slug).name}${n ? ` ×${fmtNum(n)}` : ''}
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2 L12 12 M12 2 L2 12"/></svg>
+    </button>`;
+  }).join('');
+  return `<div class="craft-bar">
+    <span class="craft-hint"><span class="mark">加工</span>の付いた素材をクリックすると、加工レシピ（下位素材）に置き換えられます。</span>
+    ${crafted.size ? `<button type="button" class="craft-reset" data-craft-reset>すべて元に戻す</button>
+    <div class="craft-chips"><span class="label">加工に置き換え中:</span>${chips}</div>` : ''}
+  </div>`;
+}
+
+function renderMaterialSummary() {
+  const base = computeTotals();
+  const { totals, applied } = applyCrafting(base);
+  const slugs = Object.keys(totals);
+
+  if (slugs.length === 0) {
+    matEmpty.hidden = false;
+    matBody.hidden = true;
+    matBody.innerHTML = '';
+    matTypeCount.textContent  = '0';
+    if (jumpToMatsCount) jumpToMatsCount.textContent = '0';
+    return;
+  }
+
+  // Group by display category.
+  // 龍門幣 / SoC / アーツ学 / モジュール are dedicated; everything else → 必要素材.
+  const DEDICATED = new Set(['currency', 'soc', 'exp', 'module_data']);
+  const grouped = {};
+  slugs.sort(compareMaterials).forEach((slug) => {
+    const meta = matMeta(slug);
+    const cat = DEDICATED.has(meta.category) ? meta.category : 'base';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push({
+      slug,
+      name: meta.name,
+      tier: meta.tier || 0,
+      qty: totals[slug],
+      fromCraft: totals[slug] - (base[slug] || 0),
+      craftable: !!RECIPES[slug],
+    });
+  });
+
+  // SoC・アーツ学は初級〜上級（data-rank）、それ以外は品質 T1〜T5（data-tier）。
+  // ティアの表示は品質が素材ごとに違う「必要素材」「モジュール」だけ
+  const RANKED = new Set(['soc', 'exp']);
+  const TIER_TAG = new Set(['base', 'module_data']);
+  const cardHtml = (m, cat) => {
+    const tierAttr = RANKED.has(cat) ? `data-rank="${m.tier}"` : `data-tier="${m.tier}"`;
+    const craftAttr = m.craftable
+      ? ' tabindex="0" role="button" aria-haspopup="dialog" title="クリックで加工レシピに置き換え"'
+      : '';
+    const tag = !TIER_TAG.has(cat) ? ''
+      : m.tier ? `<span class="tier-tag">T${m.tier}</span>`
+      : '<span class="tier-tag is-unknown">未確定</span>';
+    return `
+          <div class="mat-card${m.craftable ? ' is-craftable' : ''}" ${tierAttr} data-slug="${m.slug}"${craftAttr}>
+            <span class="mat-icon">
+              <img src="assets/materials/${m.slug}.png" alt="" loading="lazy" onerror="this.style.display='none'">
+              ${m.craftable ? '<span class="craft-mark" aria-hidden="true">加工</span>' : ''}
+            </span>
+            <span class="body">
+              <span class="name" title="${m.name}">${m.name}</span>
+              <span class="qty-row"><span class="qty">${fmtNum(m.qty)}</span>${tag}</span>
+              ${m.fromCraft > 0 ? `<span class="from-craft">うち加工用 ${fmtNum(m.fromCraft)}</span>` : ''}
+            </span>
+          </div>`;
+  };
+
+  let html = craftBarHtml(applied, slugs.some((s) => RECIPES[s]));
+  MAT_CATEGORY_ORDER.forEach((cat) => {
+    const items = grouped[cat];
+    if (!items || !items.length) return;
+    const [ja, en] = MAT_CATEGORY_LABEL[cat];
+    html += `<div class="mat-group">
+      <h4 class="mat-group-heading">${ja} <span class="en">${en}</span></h4>
+      <div class="mat-grid">
+        ${items.map((m) => cardHtml(m, cat)).join('')}
+      </div>
+    </div>`;
+  });
+
+  matBody.innerHTML = html;
+  matEmpty.hidden = true;
+  matBody.hidden = false;
+  matTypeCount.textContent = slugs.length;
+  if (jumpToMatsCount) jumpToMatsCount.textContent = slugs.length;
+}
+
+/* ----- 加工レシピへの置き換え（確認ダイアログ） ----- */
+const craftBackdrop = document.getElementById('craftBackdrop');
+const craftLead     = document.getElementById('craftLead');
+const craftList     = document.getElementById('craftList');
+const craftNote     = document.getElementById('craftNote');
+const craftOkBtn    = document.getElementById('craftOk');
+let craftSlug = null;
+let craftReturnFocus = null;
+let craftHideTimer = null;
+
+function openCraft(slug) {
+  const recipe = RECIPES[slug];
+  if (!recipe) return;
+  const qty = applyCrafting(computeTotals()).totals[slug] || 0;
+  if (!qty) return;
+  craftSlug = slug;
+
+  craftLead.innerHTML = `<strong>${matMeta(slug).name} ×${fmtNum(qty)}</strong> を、次の素材に置き換えますか？`;
+  const inputs = Object.keys(recipe.inputs).sort(compareMaterials);
+  craftList.innerHTML = inputs.map((s) => {
+    const per = recipe.inputs[s];
+    const name = matMeta(s).name;
+    return `<li class="recipe-row">
+      <span class="mat-icon"><img src="assets/materials/${s}.png" alt="" onerror="this.style.display='none'"></span>
+      <span class="name" title="${name}">${name}</span>
+      <span class="calc">${fmtNum(per)} × ${fmtNum(qty)} =<strong>${fmtNum(per * qty)}</strong></span>
+    </li>`;
+  }).join('');
+  const nested = inputs.filter((s) => crafted.has(s)).map((s) => matMeta(s).name);
+  craftNote.textContent = (nested.length
+    ? `${nested.join('・')} は加工に置き換え中のため、さらにその材料に置き換わります。` : '')
+    + '加工時の副産物・体力消費は考慮しません。';
+
+  clearTimeout(craftHideTimer);
+  craftReturnFocus = document.activeElement;
+  craftBackdrop.hidden = false;
+  // is-open が付くまでは display:none でフォーカスできないので、付けてから移す
+  requestAnimationFrame(() => {
+    if (craftSlug !== slug) return; // 開いた直後に閉じられた
+    craftBackdrop.classList.add('is-open');
+    craftOkBtn.focus();
+  });
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCraft() {
+  craftSlug = null;
+  craftBackdrop.classList.remove('is-open');
+  craftHideTimer = setTimeout(() => {
+    craftBackdrop.hidden = true;
+    document.body.style.overflow = '';
+  }, 200);
+  if (craftReturnFocus && document.contains(craftReturnFocus)) craftReturnFocus.focus({ preventScroll: true });
+  craftReturnFocus = null;
+}
+
+craftOkBtn.addEventListener('click', () => {
+  const slug = craftSlug;
+  if (slug) crafted.add(slug);
+  closeCraft();
+  renderMaterialSummary();
+  // 置き換えた素材のカードは消えるので、元に戻すチップへフォーカスを移す
+  const chip = slug && matBody.querySelector(`[data-uncraft="${slug}"]`);
+  if (chip) chip.focus({ preventScroll: true });
+});
+document.getElementById('craftCancel').addEventListener('click', closeCraft);
+document.getElementById('craftClose').addEventListener('click', closeCraft);
+craftBackdrop.addEventListener('click', (e) => {
+  if (e.target === craftBackdrop) closeCraft();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && craftBackdrop.classList.contains('is-open')) closeCraft();
+});
+
+// matBody is re-rendered on every change, so listen on the container
+matBody.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-uncraft]');
+  if (chip) {
+    const slug = chip.dataset.uncraft;
+    crafted.delete(slug);
+    renderMaterialSummary();
+    const card = matBody.querySelector(`.mat-card[data-slug="${slug}"]`);
+    if (card) card.focus({ preventScroll: true });
+    return;
+  }
+  if (e.target.closest('[data-craft-reset]')) {
+    crafted.clear();
+    renderMaterialSummary();
+    return;
+  }
+  const card = e.target.closest('.mat-card.is-craftable');
+  if (card) openCraft(card.dataset.slug);
+});
+matBody.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest('.mat-card.is-craftable');
+  if (!card) return;
+  e.preventDefault();
+  openCraft(card.dataset.slug);
+});
+
+function render() {
+  const q = state.query.trim().toLowerCase();
+  const items = OPERATORS.filter((op) => {
+    if (op.rarity !== state.rarity) return false;
+    if (state.profession && op.classKey !== state.profession) return false;
+    if (q && !op.name.toLowerCase().includes(q) && !op.id.includes(q)) return false;
+    return true;
+  }).sort(SORTERS[state.sort] || SORTERS.new);
+  grid.innerHTML = items.length
+    ? items.map(cardHtml).join('')
+    : `<div style="grid-column:1/-1;text-align:center;padding:32px;color:rgba(255,255,255,0.4);font-size:13px;">該当するオペレーターがいません</div>`;
+}
+
+/* ----- Events ----- */
+tabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    tabs.forEach((t) => t.classList.remove('is-active'));
+    tabs.forEach((t) => t.setAttribute('aria-selected', 'false'));
+    tab.classList.add('is-active');
+    tab.setAttribute('aria-selected', 'true');
+    state.rarity = Number(tab.dataset.rarity);
+    render();
+  });
+});
+
+search.addEventListener('input', (e) => {
+  state.query = e.target.value;
+  render();
+});
+
+/* ----- Sort toggle (implementation order newest / oldest, or 50音) ----- */
+const sortBtns = document.querySelectorAll('#sortGroup .sort-btn');
+function syncSortButtons() {
+  sortBtns.forEach((b) => {
+    const on = b.dataset.sort === state.sort;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-checked', String(on));
+  });
+}
+sortBtns.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    state.sort = btn.dataset.sort;
+    saveSort(state.sort);
+    syncSortButtons();
+    render();
+  });
+});
+syncSortButtons();
+
+/* ----- Data update date + NEW markers on rarity tabs ----- */
+(function initDataInfo() {
+  const el = document.getElementById('dataInfo');
+  const newCount = OPERATORS.filter((op) => op.isNew).length;
+  if (el && DATA_INFO.updated) {
+    el.innerHTML = `データ更新 ${fmtDate(DATA_INFO.updated)}`
+      + (newCount ? `<span class="new-chip">NEW</span>この更新で初登場（${newCount}人）` : '');
+  }
+  tabs.forEach((tab) => {
+    const r = Number(tab.dataset.rarity);
+    if (OPERATORS.some((op) => op.isNew && op.rarity === r)) {
+      tab.insertAdjacentHTML('beforeend', '<span class="tab-new" aria-label="新規追加あり">NEW</span>');
+    }
+  });
+})();
+
+grid.addEventListener('click', (e) => {
+  const card = e.target.closest('.op-card');
+  if (!card) return;
+  openModal(card.dataset.id);
+});
+
+grid.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest('.op-card');
+  if (!card) return;
+  e.preventDefault();
+  openModal(card.dataset.id);
+});
+
+clearBtn.addEventListener('click', () => {
+  selections.clear();
+  crafted.clear();
+  document.querySelectorAll('.op-card').forEach((c) => {
+    c.classList.remove('is-active');
+    c.setAttribute('aria-pressed', 'false');
+    const badge = c.querySelector('.op-badge');
+    if (badge) badge.textContent = '0';
+  });
+  renderSummary();
+  renderMaterialSummary();
+});
+
+/* ----- Summary row actions ----- */
+summaryBody.addEventListener('click', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  const id = tr.dataset.id;
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action === 'remove') {
+    e.stopPropagation();
+    selections.delete(id);
+    refreshCard(id);
+    renderSummary();
+    renderMaterialSummary();
+    return;
+  }
+  // any other click on the row (including edit) opens the modal
+  openModal(id);
+});
+
+summaryBody.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  e.preventDefault();
+  openModal(tr.dataset.id);
+});
+
+/* ----- Modal ----- */
+
+/* Rarity-based rules:
+ *   昇進: ★4以上で 昇進1+昇進2、★3以下は 昇進1 のみ
+ *   スキル特化: ★6=3個 / ★5,4=2個 / ★3=1個 / ★2,1=なし（セクション非表示）
+ *   モジュール: オペレーターが実際に保有するモジュール段階のみ表示。
+ *              モジュール未保有なら セクション ごと非表示。
+ */
+const MODULE_STAGE_BY_LEVEL = ['unlock', 'enhance_2', 'enhance_3']; // level 1-3 → stage kind
+
+function getRarityRules(operator) {
+  const r = operator.rarity;
+  const promotions = r >= 4 ? [1, 2] : [1];
+  let skills;
+  if (r === 6) skills = [1, 2, 3];
+  else if (r === 5 || r === 4) skills = [1, 2];
+  else if (r === 3) skills = [1];
+  else skills = [];
+
+  const modules = [];
+  if (Array.isArray(operator.modules) && operator.modules.length) {
+    MODULE_STAGE_BY_LEVEL.forEach((kind, idx) => {
+      if (operator.modules.some((m) => (m.stages || []).includes(kind))) {
+        modules.push(idx + 1);
+      }
+    });
+  }
+  return { promotions, skills, modules };
+}
+
+const CHECK_SVG = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6 L5 9 L10 3"/></svg>';
+
+function checkToggleHtml(key, label, checked) {
+  return `<label class="check-toggle">
+    <input type="checkbox" data-key="${key}"${checked ? ' checked' : ''} />
+    <span class="box">${CHECK_SVG}</span>
+    <span class="label">${label}</span>
+  </label>`;
+}
+
+function groupHtml(titleJa, titleEn, group, items, labelFn, savedKeys) {
+  if (!items.length) return '';
+  const checks = items.map((n) =>
+    checkToggleHtml(`${group}-${n}`, labelFn(n), savedKeys.has(`${group}-${n}`))
+  ).join('');
+  return `<div class="modal-group">
+    <h4 class="modal-group-heading">${titleJa} <span class="en">${titleEn}</span></h4>
+    <div class="checks" data-group="${group}">${checks}</div>
+  </div>`;
+}
+
+function skillSectionHtml(skillNo, op, savedKeys) {
+  // Per-skill section. Shows only the mastery levels (1/2/3) that actually
+  // have cost data on this operator → empty skills are skipped automatically.
+  const levels = [];
+  for (let lv = 1; lv <= 3; lv++) {
+    if (op.costs && op.costs[`skill_${skillNo}_mastery_${lv}`]) levels.push(lv);
+  }
+  if (!levels.length) return '';
+  const checks = levels.map((lv) => {
+    const key = `skill-${skillNo}-${lv}`;
+    return checkToggleHtml(key, `特化${lv}`, savedKeys.has(key));
+  }).join('');
+  return `<div class="modal-group">
+    <h4 class="modal-group-heading">スキル${skillNo} <span class="en">SKILL ${skillNo}</span></h4>
+    <div class="checks" data-group="skill-${skillNo}">${checks}</div>
+  </div>`;
+}
+
+function moduleSectionHtml(mod, savedKeys) {
+  // Display only the stages the module actually has (unlock / enhance_2 / enhance_3).
+  const items = [];
+  if ((mod.stages || []).includes('unlock'))    items.push({ level: 1, label: 'アンロック' });
+  if ((mod.stages || []).includes('enhance_2')) items.push({ level: 2, label: '強化2' });
+  if ((mod.stages || []).includes('enhance_3')) items.push({ level: 3, label: '強化3' });
+  if (!items.length) return '';
+  const checks = items.map(({ level, label }) => {
+    const key = `module-${mod.slot}-${level}`;
+    return checkToggleHtml(key, label, savedKeys.has(key));
+  }).join('');
+  const subtitle = mod.name ? `<span class="en">${mod.name}</span>` : '';
+  return `<div class="modal-group">
+    <h4 class="modal-group-heading">モジュール${mod.slot} ${subtitle}</h4>
+    <div class="checks" data-group="module-${mod.slot}">${checks}</div>
+  </div>`;
+}
+
+function buildModalBody(op, savedKeys) {
+  const r = getRarityRules(op);
+  let html = groupHtml('昇進', 'PROMOTION', 'promotion', r.promotions, (n) => `昇進${n}`, savedKeys);
+  // Per-skill sections (data-driven; no section if the skill has no costs)
+  [1, 2, 3].forEach((skillNo) => {
+    html += skillSectionHtml(skillNo, op, savedKeys);
+  });
+  // Per-module sections
+  if (Array.isArray(op.modules)) {
+    op.modules.forEach((mod) => { html += moduleSectionHtml(mod, savedKeys); });
+  }
+  modalBody.innerHTML = html;
+}
+
+function openModal(opId) {
+  const op = OPERATORS.find((o) => o.id === opId);
+  if (!op) return;
+  state.modalOpId = opId;
+
+  modalTitle.textContent = op.name;
+  modalClass.textContent = op.class;
+  modalRarity.textContent = `★${op.rarity}`;
+
+  let starHtml = '';
+  for (let i = 0; i < op.stars; i++) {
+    starHtml += `<svg viewBox="0 0 16 16"><path d="${STAR_PATH}"/></svg>`;
+  }
+  modalStars.innerHTML = starHtml;
+
+  const saved = selections.get(opId) || new Set();
+  buildModalBody(op, saved);
+  updateModalCount();
+
+  modalBackdrop.hidden = false;
+  requestAnimationFrame(() => modalBackdrop.classList.add('is-open'));
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  modalBackdrop.classList.remove('is-open');
+  // wait for transition before hiding
+  setTimeout(() => {
+    modalBackdrop.hidden = true;
+    state.modalOpId = null;
+    document.body.style.overflow = '';
+  }, 200);
+}
+
+function commitModal() {
+  if (!state.modalOpId) return closeModal();
+  const opId = state.modalOpId;
+  const set = new Set();
+  modalChecks().forEach((cb) => {
+    if (cb.checked) set.add(cb.dataset.key);
+  });
+  if (set.size) selections.set(opId, set);
+  else selections.delete(opId);
+  refreshCard(opId);
+  renderSummary();
+  renderMaterialSummary();
+  closeModal();
+}
+
+function updateModalCount() {
+  const checked = Array.from(modalChecks()).filter((cb) => cb.checked).length;
+  modalCount.innerHTML = `<strong>${checked}</strong>項目を選択中`;
+}
+
+// event delegation: each open re-renders the body, so listen on the container
+modalBody.addEventListener('change', (e) => {
+  if (e.target.matches('input[type="checkbox"]')) updateModalCount();
+});
+modalCloseBtn.addEventListener('click', closeModal);
+modalDoneBtn.addEventListener('click', commitModal);
+modalResetBtn.addEventListener('click', () => {
+  modalChecks().forEach((cb) => { cb.checked = false; });
+  updateModalCount();
+});
+
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalBackdrop.classList.contains('is-open')) closeModal();
+});
+
+/* ----- Profession (職業) tabs ----- */
+classTabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    const prof = tab.dataset.prof;
+    if (state.profession === prof) {
+      // toggle off — clicking the active tab again clears the filter
+      state.profession = '';
+      classTabs.forEach((t) => {
+        t.classList.remove('is-active');
+        t.setAttribute('aria-selected', 'false');
+      });
+    } else {
+      state.profession = prof;
+      classTabs.forEach((t) => {
+        const active = t.dataset.prof === prof;
+        t.classList.toggle('is-active', active);
+        t.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+    }
+    render();
+  });
+});
+
+/* ============================================================
+ * Floating "jump to required materials" button.
+ * - Smooth-scrolls to the materials section on click.
+ * - Visible when:
+ *     (a) user has scrolled past the top of the page, AND
+ *     (b) the materials section is not already in view.
+ * ============================================================ */
+(function setupJumpToMats() {
+  if (!jumpToMats) return;
+  const target = document.getElementById('materialsSection');
+  if (!target) return;
+
+  jumpToMats.addEventListener('click', () => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  let materialsInView = false;
+
+  // Hide the button when the materials section itself is on screen.
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => { materialsInView = entry.isIntersecting; });
+      updateVisibility();
+    }, { rootMargin: '-20% 0px -20% 0px', threshold: 0 });
+    io.observe(target);
+  }
+
+  // Also require some scroll before showing the button.
+  function updateVisibility() {
+    const scrolled = window.scrollY > 160;
+    const show = scrolled && !materialsInView;
+    jumpToMats.classList.toggle('is-visible', show);
+  }
+
+  let scrollTimer = null;
+  window.addEventListener('scroll', () => {
+    if (scrollTimer) return;
+    scrollTimer = requestAnimationFrame(() => {
+      scrollTimer = null;
+      updateVisibility();
+    });
+  }, { passive: true });
+
+  updateVisibility();
+})();
+
+render();
+renderSummary();
+renderMaterialSummary();
+</script>
+
+</body>
+</html>

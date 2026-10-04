@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>ARKNIGHTS MATERIALS COUNTER | アークナイツ素材計算ツール</title>
+<meta name="description" content="アークナイツのオペレーター育成に必要な素材を自動集計し、効率的な育成計画をサポートする無料ツール。昇進・スキル特化・モジュールごとの必要素材数を一目で確認できます。" />
+<meta name="keywords" content="アークナイツ,Arknights,素材,育成,計算,オペレーター,昇進,スキル特化,モジュール,計画" />
+<meta name="theme-color" content="#0a0c0d" />
+<meta name="color-scheme" content="dark" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="robots" content="index,follow" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="ARKNIGHTS MATERIALS COUNTER" />
+<meta property="og:title" content="ARKNIGHTS MATERIALS COUNTER | アークナイツ素材計算ツール" />
+<meta property="og:description" content="アークナイツのオペレーター育成に必要な素材を自動集計する無料ツール。" />
+<meta property="og:locale" content="ja_JP" />
+<meta property="og:image" content="assets/bg1.png" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ARKNIGHTS MATERIALS COUNTER" />
+<meta name="twitter:description" content="アークナイツのオペレーター育成素材を自動で集計するツール。" />
+<meta name="twitter:image" content="assets/bg1.png" />
+
+<link rel="icon" type="image/png" href="../select_plan/assets/brand.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Oswald:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: #d6ff3a;
+    --accent-glow: rgba(214, 255, 58, 0.55);
+    --ink: #ffffff;
+    --bg: #0a0c0d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ======== Background rotator ======== */
+  .bg-stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: #07090a;
+  }
+
+  .bg-slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transform: scale(1.08);
+    transition: opacity 1.4s ease, transform 10s linear;
+    filter: saturate(0.85) contrast(1.05);
+  }
+
+  .bg-slide.is-active {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Tint + vignette + scan overlays sit ABOVE the bg, BELOW the content */
+  .bg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .bg-overlay.tint {
+    background:
+      linear-gradient(180deg, rgba(8, 10, 12, 0.55) 0%, rgba(10, 12, 14, 0.45) 40%, rgba(10, 12, 14, 0.7) 100%),
+      radial-gradient(ellipse at 50% 55%, rgba(214, 255, 58, 0.05) 0%, rgba(0, 0, 0, 0) 55%);
+  }
+
+  .bg-overlay.vignette {
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%);
+  }
+
+  .bg-overlay.scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.018) 0px,
+      rgba(255,255,255,0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode: overlay;
+    opacity: 0.6;
+  }
+
+  .bg-overlay.grain {
+    opacity: 0.08;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Diagonal accent streaks (decorative) */
+  .streaks {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .streaks svg { position: absolute; width: 100%; height: 100%; }
+
+  /* ======== Layout ======== */
+  .page {
+    position: relative;
+    z-index: 5;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 28px 40px 40px;
+  }
+
+  /* Header / logo */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    user-select: none;
+  }
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-mark {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+  }
+  .brand-mark svg { width: 100%; height: 100%; display: block; }
+  .brand-name {
+    font-family: "Oswald", sans-serif;
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: 0.18em;
+    color: #fff;
+  }
+  .brand-sub {
+    margin-top: 6px;
+    margin-left: 0;
+    font-family: "Oswald", sans-serif;
+    font-weight: 300;
+    font-size: 11px;
+    letter-spacing: 0.42em;
+    color: rgba(255,255,255,0.78);
+    border-top: 1px solid rgba(255,255,255,0.35);
+    padding-top: 4px;
+    width: max-content;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-family: "Oswald", sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: rgba(255,255,255,0.55);
+  }
+  .header-meta .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  /* Hero */
+  .hero {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    position: relative;
+    padding: 60px 0 40px;
+  }
+
+  /* radial ring backdrop behind the headline */
+  .ring-backdrop {
+    position: absolute;
+    width: min(900px, 88vw);
+    aspect-ratio: 1 / 1;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .ring-backdrop svg { width: 100%; height: 100%; display: block; }
+
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    width: 100%;
+    padding: 0 20px;
+  }
+
+  .eyebrow {
+    font-family: "Oswald", sans-serif;
+    font-weight: 300;
+    letter-spacing: 0.55em;
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 28px;
+    text-transform: uppercase;
+  }
+
+  .headline {
+    font-family: "Saira Stencil One", "Oswald", sans-serif;
+    font-weight: 400;
+    font-size: clamp(56px, 11vw, 150px);
+    line-height: 0.96;
+    letter-spacing: 0.01em;
+    color: #fff;
+    text-shadow:
+      0 0 22px rgba(255,255,255,0.08);
+    position: relative;
+    display: inline-block;
+  }
+
+  .headline .line {
+    display: block;
+    position: relative;
+  }
+
+  /* Glitch chromatic offset layers */
+  .glitch {
+    position: relative;
+    display: inline-block;
+  }
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .glitch::before {
+    color: var(--accent);
+    transform: translate(2px, -1px);
+    mix-blend-mode: screen;
+    opacity: 0.78;
+    clip-path: polygon(0 8%, 100% 8%, 100% 22%, 0 22%);
+    animation: glitchA 5.0s infinite steps(1, end);
+  }
+  .glitch::after {
+    color: #4ad6ff;
+    transform: translate(-2px, 1px);
+    mix-blend-mode: screen;
+    opacity: 0.7;
+    clip-path: polygon(0 60%, 100% 60%, 100% 78%, 0 78%);
+    animation: glitchB 6.0s infinite steps(1, end);
+  }
+
+  @keyframes glitchA {
+    0%   { clip-path: polygon(0 4%, 100% 4%, 100% 16%, 0 16%);  transform: translate(2px, -1px); }
+    7%   { clip-path: polygon(0 28%, 100% 28%, 100% 38%, 0 38%); transform: translate(-3px, 2px); }
+    14%  { clip-path: polygon(0 62%, 100% 62%, 100% 74%, 0 74%); transform: translate(4px, -2px); }
+    21%  { clip-path: polygon(0 12%, 100% 12%, 100% 22%, 0 22%); transform: translate(-2px, 1px); }
+    28%  { clip-path: polygon(0 80%, 100% 80%, 100% 92%, 0 92%); transform: translate(3px, -3px); }
+    35%  { clip-path: polygon(0 36%, 100% 36%, 100% 50%, 0 50%); transform: translate(-4px, 2px); }
+    42%  { clip-path: polygon(0 6%, 100% 6%, 100% 14%, 0 14%);   transform: translate(2px, 1px); }
+    50%  { clip-path: polygon(0 50%, 100% 50%, 100% 64%, 0 64%); transform: translate(-3px, -1px); }
+    58%  { clip-path: polygon(0 18%, 100% 18%, 100% 30%, 0 30%); transform: translate(5px, -2px); }
+    66%  { clip-path: polygon(0 70%, 100% 70%, 100% 80%, 0 80%); transform: translate(-2px, 2px); }
+    74%  { clip-path: polygon(0 40%, 100% 40%, 100% 52%, 0 52%); transform: translate(3px, -1px); }
+    82%  { clip-path: polygon(0 86%, 100% 86%, 100% 96%, 0 96%); transform: translate(-3px, 2px); }
+    90%  { clip-path: polygon(0 22%, 100% 22%, 100% 34%, 0 34%); transform: translate(2px, -2px); }
+    100% { clip-path: polygon(0 4%, 100% 4%, 100% 16%, 0 16%);  transform: translate(2px, -1px); }
+  }
+  @keyframes glitchB {
+    0%   { clip-path: polygon(0 60%, 100% 60%, 100% 72%, 0 72%); transform: translate(-2px, 1px); }
+    8%   { clip-path: polygon(0 14%, 100% 14%, 100% 26%, 0 26%); transform: translate(3px, -2px); }
+    16%  { clip-path: polygon(0 44%, 100% 44%, 100% 56%, 0 56%); transform: translate(-4px, 1px); }
+    24%  { clip-path: polygon(0 76%, 100% 76%, 100% 86%, 0 86%); transform: translate(2px, 2px); }
+    32%  { clip-path: polygon(0 8%, 100% 8%, 100% 18%, 0 18%);   transform: translate(-3px, -2px); }
+    40%  { clip-path: polygon(0 32%, 100% 32%, 100% 44%, 0 44%); transform: translate(4px, 1px); }
+    48%  { clip-path: polygon(0 56%, 100% 56%, 100% 68%, 0 68%); transform: translate(-2px, -1px); }
+    56%  { clip-path: polygon(0 88%, 100% 88%, 100% 98%, 0 98%); transform: translate(3px, 2px); }
+    64%  { clip-path: polygon(0 22%, 100% 22%, 100% 34%, 0 34%); transform: translate(-5px, 1px); }
+    72%  { clip-path: polygon(0 50%, 100% 50%, 100% 62%, 0 62%); transform: translate(2px, -2px); }
+    80%  { clip-path: polygon(0 4%, 100% 4%, 100% 14%, 0 14%);   transform: translate(-3px, 2px); }
+    88%  { clip-path: polygon(0 66%, 100% 66%, 100% 78%, 0 78%); transform: translate(4px, -1px); }
+    100% { clip-path: polygon(0 60%, 100% 60%, 100% 72%, 0 72%); transform: translate(-2px, 1px); }
+  }
+
+  /* Subtle horizontal jitter on the headline as a whole */
+  .glitch {
+    animation: glitchShake 4.3s infinite steps(1, end);
+  }
+  @keyframes glitchShake {
+    0%, 100% { transform: translate(0, 0); }
+    6%  { transform: translate(-1px, 0); }
+    7%  { transform: translate(1px, 0); }
+    8%  { transform: translate(0, 0); }
+    23% { transform: translate(2px, 0); }
+    24% { transform: translate(-2px, 0); }
+    25% { transform: translate(0, 0); }
+    47% { transform: translate(-1px, 1px); }
+    48% { transform: translate(1px, -1px); }
+    49% { transform: translate(0, 0); }
+    71% { transform: translate(2px, 0); }
+    72% { transform: translate(-1px, 0); }
+    73% { transform: translate(0, 0); }
+    88% { transform: translate(-1px, 0); }
+    89% { transform: translate(1px, 0); }
+    90% { transform: translate(0, 0); }
+  }
+
+  .headline .dot-accent {
+    color: var(--accent);
+    text-shadow: 0 0 18px var(--accent-glow);
+  }
+
+  /* divider under headline */
+  .divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 38px auto 26px;
+    width: min(420px, 70%);
+  }
+  .divider .bar {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+  }
+  .divider .diamond {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    transform: rotate(45deg);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .lead {
+    font-size: clamp(15px, 1.4vw, 19px);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 56px;
+  }
+
+  /* CTA */
+  .cta-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .cta {
+    --cut: 18px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 22px;
+    padding: 22px 44px;
+    background: rgba(8, 10, 12, 0.92);
+    color: var(--accent);
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    clip-path: polygon(
+      var(--cut) 0,
+      calc(100% - var(--cut)) 0,
+      100% var(--cut),
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      var(--cut) 100%,
+      0 calc(100% - var(--cut)),
+      0 var(--cut)
+    );
+    transition: transform 0.25s ease, color 0.2s ease, background 0.2s ease;
+  }
+
+  /* Glow frame around the CTA — uses an outer wrapper so the clip-path doesn't cut its own glow */
+  .cta-frame {
+    position: relative;
+    display: inline-block;
+    padding: 2px;
+    background: var(--accent);
+    clip-path: polygon(
+      18px 0,
+      calc(100% - 18px) 0,
+      100% 18px,
+      100% calc(100% - 18px),
+      calc(100% - 18px) 100%,
+      18px 100%,
+      0 calc(100% - 18px),
+      0 18px
+    );
+    filter: drop-shadow(0 0 14px var(--accent-glow)) drop-shadow(0 0 28px rgba(214,255,58,0.35));
+    transition: filter 0.25s ease, transform 0.25s ease;
+  }
+
+  .cta-frame:hover {
+    filter: drop-shadow(0 0 22px var(--accent-glow)) drop-shadow(0 0 44px rgba(214,255,58,0.55));
+    transform: translateY(-2px);
+  }
+  .cta-frame:hover .cta {
+    background: var(--accent);
+    color: #0a0c0d;
+    text-shadow: 0 0 1px rgba(10, 12, 13, 0.6);
+  }
+
+  .cta .icon {
+    width: 26px; height: 26px;
+    flex: 0 0 auto;
+  }
+  .cta .arrow {
+    width: 18px; height: 18px;
+    flex: 0 0 auto;
+    margin-left: 10px;
+    transition: transform 0.25s ease;
+  }
+  .cta-frame:hover .arrow { transform: translateX(4px); }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: rgba(255,255,255,0.45);
+    font-family: "Oswald", sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+  }
+
+  .footer .indicators {
+    display: none;
+  }
+  .indicator {
+    width: 28px;
+    height: 3px;
+    background: rgba(255,255,255,0.18);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  .indicator.is-active {
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  /* Corner crosshairs (decorative) */
+  .cross {
+    position: fixed;
+    z-index: 3;
+    width: 14px; height: 14px;
+    pointer-events: none;
+    color: rgba(255,255,255,0.35);
+  }
+  .cross svg { width: 100%; height: 100%; }
+  .cross.tl { top: 22%; left: 4%; }
+  .cross.bl { bottom: 18%; left: 6%; }
+  .cross.tr { top: 28%; right: 5%; }
+  .cross.br { bottom: 22%; right: 4%; }
+
+  @media (max-width: 720px) {
+    .page { padding: 22px 22px 28px; }
+    .header-meta { display: none; }
+    .brand-name { font-size: 22px; }
+    .brand-sub { font-size: 9px; margin-left: 0; }
+    .eyebrow { font-size: 11px; letter-spacing: 0.4em; margin-bottom: 22px; }
+    .lead { margin-bottom: 36px; font-size: 14px; }
+    .cta { padding: 18px 30px; font-size: 14px; gap: 14px; }
+    .cross { display: none; }
+    .footer { font-size: 9px; }
+  }
+  @media (max-width: 420px) {
+    .page { padding: 18px 14px 24px; }
+    .brand-name { font-size: 18px; letter-spacing: 0.14em; }
+    .eyebrow { font-size: 10px; letter-spacing: 0.32em; margin-bottom: 18px; }
+    .lead { font-size: 13px; margin-bottom: 28px; }
+    .cta { padding: 16px 22px; font-size: 13px; letter-spacing: 0.12em; }
+    .cta .icon { width: 22px; height: 22px; }
+    .footer span { font-size: 8px; }
+    .footer .indicators { display: none; }
+  }
+  /* iOS safe-area padding for notched devices */
+  @supports (padding: max(0px)) {
+    body { padding-bottom: env(safe-area-inset-bottom); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background rotator -->
+<div class="bg-stage" id="bgStage" aria-hidden="true">
+  <div class="bg-slide" data-bg="assets/bg1.png"></div>
+  <div class="bg-slide" data-bg="assets/bg2.png"></div>
+  <div class="bg-slide" data-bg="assets/bg3.png"></div>
+  <div class="bg-slide" data-bg="assets/bg4.png"></div>
+  <div class="bg-slide" data-bg="assets/bg5.png"></div>
+  <div class="bg-slide" data-bg="assets/bg6.png"></div>
+</div>
+<div class="bg-overlay tint" aria-hidden="true"></div>
+<div class="bg-overlay vignette" aria-hidden="true"></div>
+<div class="bg-overlay scanlines" aria-hidden="true"></div>
+<div class="bg-overlay grain" aria-hidden="true"></div>
+
+<!-- Decorative diagonal streaks -->
+<div class="streaks" aria-hidden="true">
+  <svg viewBox="0 0 1440 900" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#d6ff3a" stop-opacity="0"/>
+        <stop offset="0.5" stop-color="#d6ff3a" stop-opacity="0.85"/>
+        <stop offset="1" stop-color="#d6ff3a" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#4ad6ff" stop-opacity="0"/>
+        <stop offset="0.5" stop-color="#4ad6ff" stop-opacity="0.6"/>
+        <stop offset="1" stop-color="#4ad6ff" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <line x1="900" y1="60" x2="1180" y2="120" stroke="url(#g1)" stroke-width="1.5"/>
+    <line x1="60" y1="540" x2="200" y2="510" stroke="url(#g2)" stroke-width="1"/>
+    <line x1="1280" y1="640" x2="1400" y2="680" stroke="url(#g1)" stroke-width="1"/>
+    <line x1="40" y1="240" x2="120" y2="220" stroke="url(#g1)" stroke-width="0.8" opacity="0.6"/>
+    <line x1="1320" y1="280" x2="1420" y2="260" stroke="url(#g2)" stroke-width="0.8" opacity="0.6"/>
+  </svg>
+</div>
+
+<!-- Corner crosshairs -->
+<span class="cross tl"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+<span class="cross bl"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+<span class="cross tr"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+<span class="cross br"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1"><path d="M7 0v14M0 7h14"/></svg></span>
+
+<div class="page">
+  <header class="header">
+    <div class="brand">
+      <div class="brand-row">
+        <span class="brand-name">ARKNIGHTS</span>
+      </div>
+      <span class="brand-sub">MATERIALS COUNTER</span>
+    </div>
+
+    <div class="header-meta">
+      <span>SYS // ONLINE</span>
+      <span class="dot"></span>
+      <span>v 1.0</span>
+    </div>
+  </header>
+
+  <main class="hero">
+    <div class="ring-backdrop" aria-hidden="true">
+      <svg viewBox="0 0 800 800" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1">
+        <circle cx="400" cy="400" r="380"/>
+        <circle cx="400" cy="400" r="300" stroke="rgba(255,255,255,0.07)"/>
+        <circle cx="400" cy="400" r="220" stroke="rgba(255,255,255,0.05)"/>
+        <circle cx="400" cy="400" r="140" stroke="rgba(214,255,58,0.10)" stroke-dasharray="2 6"/>
+      </svg>
+    </div>
+
+    <div class="hero-inner">
+      <div class="eyebrow">ARKNIGHTS&nbsp;&nbsp;MATERIALS&nbsp;&nbsp;COUNTER</div>
+
+      <h1 class="headline">
+        <span class="line"><span class="glitch" data-text="Operator">Operator</span></span>
+        <span class="line"><span class="glitch" data-text="Enhancement">Enhancement</span></span>
+        <span class="line"><span class="glitch" data-text="Plan">Plan</span></span>
+      </h1>
+
+      <div class="divider" aria-hidden="true">
+        <span class="bar"></span>
+        <span class="diamond"></span>
+        <span class="bar"></span>
+      </div>
+
+      <p class="lead">アークナイツの育成を、もっとスマートに。</p>
+
+      <div class="cta-wrap">
+        <span class="cta-frame">
+          <a class="cta" href="../select_plan/index.html">
+            <svg class="icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <circle cx="16" cy="16" r="9" />
+              <circle cx="16" cy="16" r="2.2" fill="currentColor" stroke="none" />
+              <path d="M16 3 V8 M16 24 V29 M3 16 H8 M24 16 H29" />
+            </svg>
+            <span>オペレーターを選択する</span>
+            <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 6 L15 12 L9 18" />
+            </svg>
+          </a>
+        </span>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>RHODES&nbsp;ISLAND&nbsp;//&nbsp;OPERATIONAL</span>
+    <div class="indicators" id="indicators" aria-hidden="true">
+      <span class="indicator"></span>
+      <span class="indicator"></span>
+      <span class="indicator"></span>
+      <span class="indicator"></span>
+      <span class="indicator"></span>
+      <span class="indicator"></span>
+    </div>
+    <span>EST&nbsp;//&nbsp;2026</span>
+  </footer>
+</div>
+
+<script>
+  // ====== Background rotator: switch every 10s with crossfade ======
+  (function () {
+    const slides = Array.from(document.querySelectorAll('.bg-slide'));
+    const indicators = Array.from(document.querySelectorAll('#indicators .indicator'));
+
+    // preload + assign background-image
+    slides.forEach((el) => {
+      const url = el.dataset.bg;
+      const img = new Image();
+      img.src = url;
+      el.style.backgroundImage = `url("${url}")`;
+    });
+
+    let i = 0;
+    const setActive = (idx) => {
+      slides.forEach((el, n) => el.classList.toggle('is-active', n === idx));
+      indicators.forEach((el, n) => el.classList.toggle('is-active', n === idx));
+    };
+    setActive(0);
+
+    setInterval(() => {
+      i = (i + 1) % slides.length;
+      setActive(i);
+    }, 10000);
+  })();
+</script>
+
+</body>
+</html>
