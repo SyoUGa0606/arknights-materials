@@ -667,6 +667,24 @@
     box-shadow: 0 0 8px var(--new-glow);
     pointer-events: none;
   }
+  /* reference-only operators (統合戦略の予備隊員など) — no growth materials */
+  .op-limited-tag {
+    position: absolute;
+    top: -7px;
+    left: -5px;
+    z-index: 2;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.85);
+    background: #3a4148;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 0 5px;
+    border-radius: 2px;
+    pointer-events: none;
+  }
 
   .op-portrait {
     position: relative;
@@ -1332,6 +1350,16 @@
   }
 
   .modal-group { margin-bottom: 22px; }
+  /* shown instead of the groups when the operator has no growth materials */
+  .modal-empty {
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.65);
+    padding: 14px 16px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    margin: 0 0 22px;
+  }
   .modal-group-heading {
     display: flex;
     align-items: center;
@@ -2198,10 +2226,12 @@
  * Operator data — pulled from window.OPERATORS (auto-generated
  * from the Django DB). Each entry has:
  *   { id, name, rarity, stars, class, classKey, branch,
- *     order, released, cnReleased, isNew }
+ *     order, released, cnReleased, isNew, limited? }
  * order = implementation order (JP release order, then CN-only
  * operators by CN release date); isNew = first appeared in the
  * latest monthly update (window.DATA_INFO.updated).
+ * limited = only on reference-only operators outside the release
+ * history (e.g. '統合戦略・保全駐在限定'); they have no costs and no order.
  * Place 180x180 PNGs at assets/operators/{id}.png to show
  * portraits; missing files fall back to the placeholder SVG.
  * ============================================================ */
@@ -2246,6 +2276,7 @@ function fmtDate(iso) {
   return iso ? iso.replace(/-/g, '/') : '';
 }
 function releaseLabel(op) {
+  if (op.limited) return op.limited;
   if (op.released) return `国内実装 ${fmtDate(op.released)}`;
   if (op.cnReleased) return `国内未実装（大陸実装 ${fmtDate(op.cnReleased)}）`;
   return '';
@@ -2315,6 +2346,7 @@ function cardHtml(op) {
   return `
     <div class="op-card${active}${isNew}" data-id="${op.id}" tabindex="0" role="button" aria-pressed="${count > 0}"${release ? ` title="${release}"` : ''}>
       ${op.isNew ? '<span class="op-new-tag" aria-label="新規追加">NEW</span>' : ''}
+      ${op.limited ? `<span class="op-limited-tag" aria-label="${op.limited}">限定</span>` : ''}
       <span class="op-badge" aria-label="${count}項目選択中">${count}</span>
       <div class="op-portrait">
         ${imgFor(op)}
@@ -2865,16 +2897,17 @@ summaryBody.addEventListener('keydown', (e) => {
 /* ----- Modal ----- */
 
 /* Rarity-based rules:
- *   昇進: ★4以上で 昇進1+昇進2、★3以下は 昇進1 のみ
+ *   昇進: 素材データのある段階のみ（★4以上は 昇進1+昇進2、★3 は 昇進1、★2,1 は昇進なし）
  *   スキル特化: ★6=3個 / ★5,4=2個 / ★3=1個 / ★2,1=なし（セクション非表示）
  *   モジュール: オペレーターが実際に保有するモジュール段階のみ表示。
  *              モジュール未保有なら セクション ごと非表示。
+ *   選べる項目が無いオペ（★2,1・限定オペ）は代わりに説明文を出す。
  */
 const MODULE_STAGE_BY_LEVEL = ['unlock', 'enhance_2', 'enhance_3']; // level 1-3 → stage kind
 
 function getRarityRules(operator) {
   const r = operator.rarity;
-  const promotions = r >= 4 ? [1, 2] : [1];
+  const promotions = [1, 2].filter((n) => operator.costs && operator.costs[`promotion_${n}`]);
   let skills;
   if (r === 6) skills = [1, 2, 3];
   else if (r === 5 || r === 4) skills = [1, 2];
@@ -2960,7 +2993,14 @@ function buildModalBody(op, savedKeys) {
   if (Array.isArray(op.modules)) {
     op.modules.forEach((mod) => { html += moduleSectionHtml(mod, savedKeys); });
   }
-  modalBody.innerHTML = html;
+  modalBody.innerHTML = html || `<p class="modal-empty">${noMaterialsText(op)}</p>`;
+}
+
+function noMaterialsText(op) {
+  if (op.limited) return `${op.limited}のオペレーターのため、育成素材はありません。`;
+  if (op.rarity <= 2) return '★1・★2 のオペレーターは昇進できないため、育成素材はありません。';
+  // e.g. 統合戦略の報酬オペ（レイディアン・メカニスト）: promotion / mastery / modules unlock by run goals
+  return '素材を使う育成項目がありません（統合戦略の報酬オペレーターは、昇進・特化・モジュールを統合戦略の条件達成で解放します）。';
 }
 
 function openModal(opId) {
@@ -2981,6 +3021,11 @@ function openModal(opId) {
   const saved = selections.get(opId) || new Set();
   buildModalBody(op, saved);
   updateModalCount();
+  // nothing to select → only a close button
+  const selectable = modalChecks().length > 0;
+  modalCount.style.visibility = selectable ? '' : 'hidden'; // keeps the close button right-aligned
+  modalResetBtn.style.display = selectable ? '' : 'none';
+  modalDoneBtn.textContent = selectable ? '決定' : '閉じる';
 
   modalBackdrop.hidden = false;
   requestAnimationFrame(() => modalBackdrop.classList.add('is-open'));
