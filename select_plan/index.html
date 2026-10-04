@@ -16,12 +16,14 @@
 <meta property="og:title" content="オペレーター選択 | ARKNIGHTS MATERIALS COUNTER" />
 <meta property="og:description" content="アークナイツの全オペレーターから育成に必要な素材を自動で集計するページ。" />
 <meta property="og:locale" content="ja_JP" />
-<meta property="og:image" content="assets/brand.png" />
+<meta property="og:url" content="https://syouga0606.github.io/arknights-materials/select_plan/index.html" />
+<meta property="og:image" content="https://syouga0606.github.io/arknights-materials/select_plan/assets/brand.png" />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="オペレーター選択 | ARKNIGHTS MATERIALS COUNTER" />
 <meta name="twitter:description" content="★1〜★6 のオペレーターから育成素材を自動で合計" />
-<meta name="twitter:image" content="assets/brand.png" />
+<meta name="twitter:image" content="https://syouga0606.github.io/arknights-materials/select_plan/assets/brand.png" />
+<link rel="canonical" href="https://syouga0606.github.io/arknights-materials/select_plan/index.html" />
 
 <link rel="icon" type="image/png" href="assets/brand.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -154,6 +156,25 @@
     padding-top: 4px;
     width: max-content;
   }
+
+  /* Visitor count (GoatCounter); stays hidden if it can't be loaded */
+  .header-meta {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: 14px;
+    font-family: "Oswald", sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: rgba(255,255,255,0.55);
+  }
+  .header-meta[hidden] { display: none; }
+  .header-meta .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .visitors-num { color: rgba(255,255,255,0.88); letter-spacing: 0.12em; }
 
   /* Back button (octagonal cut, neon green outline) */
   .back-btn-frame {
@@ -1709,6 +1730,7 @@
     .brand-sub { font-size: 9px; margin-left: 0; }
     .brand-mark { height: 28px; }
     .header { flex-wrap: wrap; }
+    .header-meta { gap: 10px; font-size: 9px; letter-spacing: 0.2em; }
     .page-title { font-size: clamp(40px, 13vw, 64px); margin-bottom: 22px; }
     .section-heading { font-size: 15px; }
     .section-heading.section-heading-sub { font-size: 14px; margin-top: 22px; }
@@ -1789,6 +1811,11 @@
         <span class="brand-name">ARKNIGHTS</span>
       </div>
       <span class="brand-sub">MATERIALS COUNTER</span>
+    </div>
+
+    <div class="header-meta" id="visitors" title="累計訪問者数（数時間ごとに更新）" hidden>
+      <span class="dot"></span>
+      <span>VISITORS // <span class="visitors-num" id="visitorsNum"></span></span>
     </div>
   </header>
 
@@ -3080,7 +3107,24 @@ classTabs.forEach((tab) => {
 render();
 renderSummary();
 renderMaterialSummary();
+
+// ====== Visitor count (GoatCounter): site total, cached up to 4h ======
+(function () {
+  const box = document.getElementById('visitors');
+  const num = document.getElementById('visitorsNum');
+  if (!/^https?:$/.test(location.protocol)) return;
+  fetch('https://syouga.goatcounter.com/counter/TOTAL.json')
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((d) => {
+      if (!d || d.count == null) return;
+      num.textContent = d.count;
+      box.hidden = false;
+    })
+    .catch(() => {});
+})();
 </script>
+<!-- GoatCounter: counts this pageview (skips localhost / file://) -->
+<script data-goatcounter="https://syouga.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
 </body>
 </html>

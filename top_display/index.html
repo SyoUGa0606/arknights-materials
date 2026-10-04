@@ -16,12 +16,14 @@
 <meta property="og:title" content="ARKNIGHTS MATERIALS COUNTER | アークナイツ素材計算ツール" />
 <meta property="og:description" content="アークナイツのオペレーター育成に必要な素材を自動集計する無料ツール。" />
 <meta property="og:locale" content="ja_JP" />
-<meta property="og:image" content="assets/bg1.png" />
+<meta property="og:url" content="https://syouga0606.github.io/arknights-materials/top_display/index.html" />
+<meta property="og:image" content="https://syouga0606.github.io/arknights-materials/top_display/assets/bg1.png" />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="ARKNIGHTS MATERIALS COUNTER" />
 <meta name="twitter:description" content="アークナイツのオペレーター育成素材を自動で集計するツール。" />
-<meta name="twitter:image" content="assets/bg1.png" />
+<meta name="twitter:image" content="https://syouga0606.github.io/arknights-materials/top_display/assets/bg1.png" />
+<link rel="canonical" href="https://syouga0606.github.io/arknights-materials/top_display/index.html" />
 
 <link rel="icon" type="image/png" href="../select_plan/assets/brand.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -123,6 +125,8 @@
     min-height: 100vh;
     display: grid;
     grid-template-rows: auto 1fr auto;
+    /* keep the hero's min-content from widening header/footer past the viewport */
+    grid-template-columns: minmax(0, 1fr);
     padding: 28px 40px 40px;
   }
 
@@ -185,6 +189,10 @@
     background: var(--accent);
     box-shadow: 0 0 10px var(--accent-glow);
   }
+  /* Visitor count (GoatCounter); stays hidden if it can't be loaded */
+  .visitors { display: inline-flex; align-items: center; gap: 18px; }
+  .visitors[hidden] { display: none; }
+  .visitors-num { color: rgba(255,255,255,0.88); letter-spacing: 0.12em; }
 
   /* Hero */
   .hero {
@@ -481,7 +489,9 @@
 
   @media (max-width: 720px) {
     .page { padding: 22px 22px 28px; }
-    .header-meta { display: none; }
+    .header-meta { gap: 10px; font-size: 9px; letter-spacing: 0.2em; }
+    .header-meta .meta-sys { display: none; }
+    .visitors { gap: 10px; }
     .brand-name { font-size: 22px; }
     .brand-sub { font-size: 9px; margin-left: 0; }
     .eyebrow { font-size: 11px; letter-spacing: 0.4em; margin-bottom: 22px; }
@@ -493,6 +503,7 @@
   @media (max-width: 420px) {
     .page { padding: 18px 14px 24px; }
     .brand-name { font-size: 18px; letter-spacing: 0.14em; }
+    .headline { font-size: clamp(32px, 12vw, 56px); }
     .eyebrow { font-size: 10px; letter-spacing: 0.32em; margin-bottom: 18px; }
     .lead { font-size: 13px; margin-bottom: 28px; }
     .cta { padding: 16px 22px; font-size: 13px; letter-spacing: 0.12em; }
@@ -561,9 +572,13 @@
     </div>
 
     <div class="header-meta">
-      <span>SYS // ONLINE</span>
-      <span class="dot"></span>
-      <span>v 1.0</span>
+      <span class="meta-sys">SYS // ONLINE</span>
+      <span class="dot meta-sys"></span>
+      <span class="meta-sys">v 1.0</span>
+      <span class="visitors" id="visitors" title="累計訪問者数（数時間ごとに更新）" hidden>
+        <span class="dot meta-sys"></span>
+        <span>VISITORS // <span class="visitors-num" id="visitorsNum"></span></span>
+      </span>
     </div>
   </header>
 
@@ -652,7 +667,24 @@
       setActive(i);
     }, 10000);
   })();
+
+  // ====== Visitor count (GoatCounter): site total, cached up to 4h ======
+  (function () {
+    const box = document.getElementById('visitors');
+    const num = document.getElementById('visitorsNum');
+    if (!/^https?:$/.test(location.protocol)) return;
+    fetch('https://syouga.goatcounter.com/counter/TOTAL.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((d) => {
+        if (!d || d.count == null) return;
+        num.textContent = d.count;
+        box.hidden = false;
+      })
+      .catch(() => {});
+  })();
 </script>
+<!-- GoatCounter: counts this pageview (skips localhost / file://) -->
+<script data-goatcounter="https://syouga.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
 </body>
 </html>
