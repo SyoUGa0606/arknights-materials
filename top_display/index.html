@@ -124,7 +124,7 @@
     z-index: 5;
     min-height: 100vh;
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto 1fr auto auto;
     /* keep the hero's min-content from widening header/footer past the viewport */
     grid-template-columns: minmax(0, 1fr);
     padding: 28px 40px 40px;
@@ -197,10 +197,15 @@
   /* Hero */
   .hero {
     display: grid;
+    /* full-width track: the one-line UPDATE link must not widen the hero past the viewport */
+    grid-template-columns: minmax(0, 1fr);
     place-items: center;
     text-align: center;
     position: relative;
     padding: 60px 0 40px;
+    /* fill the first screen; the update log starts below it */
+    min-height: calc(100vh - 80px);
+    min-height: calc(100svh - 80px);
   }
 
   /* radial ring backdrop behind the headline */
@@ -448,6 +453,109 @@
   }
   .cta-frame:hover .arrow { transform: translateX(4px); }
 
+  /* Latest update link under the CTA (filled from the first entry of the update log) */
+  .news-wrap { display: flex; justify-content: center; margin-top: 34px; }
+  .news {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(640px, 100%);
+    padding: 8px 14px;
+    background: rgba(8, 10, 12, 0.6);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .news[hidden] { display: none; }
+  .news:hover, .news:focus-visible { border-color: rgba(214,255,58,0.6); color: #fff; }
+  .news-tag {
+    flex: 0 0 auto;
+    padding: 1px 6px;
+    background: var(--accent);
+    color: #0a0c0d;
+    font-family: "Oswald", sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+  }
+  .news-date { flex: 0 0 auto; font-family: "Oswald", sans-serif; letter-spacing: 0.12em; color: var(--accent); }
+  .news-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .news-arrow { flex: 0 0 auto; width: 12px; height: 12px; }
+
+  /* ======== Update log (更新履歴) — 新しい順。長くなったら古いものから消す ======== */
+  .updates {
+    width: min(760px, 100%);
+    margin: 0 auto 56px;
+    padding: 28px 32px 24px;
+    background: rgba(8, 10, 12, 0.78);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-top: 2px solid var(--accent);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    scroll-margin-top: 24px;
+  }
+  .updates-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .updates-head .diamond {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    transform: rotate(45deg);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .updates-title {
+    font-family: "Oswald", sans-serif;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: 0.32em;
+  }
+  .updates-sub { font-size: 12px; letter-spacing: 0.2em; color: rgba(255,255,255,0.55); }
+  .updates-list { list-style: none; }
+  .update {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 6px 20px;
+    padding: 14px 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .updates-list .update:first-child { border-top: none; }
+  .update-date {
+    font-family: "Oswald", sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    line-height: 1.7;
+  }
+  .update-items { list-style: none; display: grid; gap: 6px; }
+  .update-items li {
+    position: relative;
+    padding-left: 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.88);
+  }
+  .update-items li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 0.85em;
+    width: 6px;
+    height: 1px;
+    background: rgba(214,255,58,0.75);
+  }
+  .updates-note {
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.55);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
   /* Footer */
   .footer {
     display: flex;
@@ -497,6 +605,12 @@
     .eyebrow { font-size: 11px; letter-spacing: 0.4em; margin-bottom: 22px; }
     .lead { margin-bottom: 36px; font-size: 14px; }
     .cta { padding: 18px 30px; font-size: 14px; gap: 14px; }
+    .news-wrap { margin-top: 26px; }
+    .news { font-size: 11px; gap: 10px; padding: 7px 12px; }
+    .updates { padding: 22px 18px 18px; margin-bottom: 40px; }
+    .updates-title { font-size: 17px; letter-spacing: 0.26em; }
+    .update { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    .update-items li { font-size: 13px; }
     .cross { display: none; }
     .footer { font-size: 9px; }
   }
@@ -624,8 +738,47 @@
           </a>
         </span>
       </div>
+
+      <div class="news-wrap">
+        <a class="news" id="news" href="#updates" hidden>
+          <span class="news-tag">UPDATE</span>
+          <span class="news-date"></span>
+          <span class="news-text"></span>
+          <svg class="news-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9 L12 15 L18 9" />
+          </svg>
+        </a>
+      </div>
     </div>
   </main>
+
+  <!-- 更新履歴：新しい日付を先頭に足す（1件目の最初の文がボタン下の UPDATE 表示になる） -->
+  <section class="updates" id="updates" aria-labelledby="updatesTitle">
+    <div class="updates-head">
+      <span class="diamond" aria-hidden="true"></span>
+      <h2 class="updates-title" id="updatesTitle">UPDATE LOG</h2>
+      <span class="updates-sub">更新履歴</span>
+    </div>
+    <ol class="updates-list">
+      <li class="update">
+        <time class="update-date" datetime="2026-10-06">2026.10.06</time>
+        <ul class="update-items">
+          <li>オペレーターのカードに入手方法（恒常・限定・配布）のタグを追加しました。パソコンではカードにマウスを乗せると、詳しい入手方法を表示します。</li>
+        </ul>
+      </li>
+      <li class="update">
+        <time class="update-date" datetime="2026-10-04">2026.10.04</time>
+        <ul class="update-items">
+          <li>育成項目を選ぶ画面に「すべて選択」ボタンを追加しました。</li>
+          <li>育成素材のないオペレーター（★1・★2 など）は「育成素材はありません」と表示するようにしました。</li>
+          <li>統合戦略・保全駐在限定の予備隊員 5人を、参考として★3 に掲載しました。</li>
+          <li>訪問者数の表示を追加しました。</li>
+          <li>サイトを公開しました。オペレーターデータは 2026/10/04 時点の内容です。</li>
+        </ul>
+      </li>
+    </ol>
+    <p class="updates-note">オペレーターデータは毎月初めに更新する予定です。</p>
+  </section>
 
   <footer class="footer">
     <span>RHODES&nbsp;ISLAND&nbsp;//&nbsp;OPERATIONAL</span>
@@ -666,6 +819,17 @@
       i = (i + 1) % slides.length;
       setActive(i);
     }, 10000);
+  })();
+
+  // ====== Latest update link: first sentence of the newest update log entry ======
+  (function () {
+    const first = document.querySelector('#updates .update');
+    const link = document.getElementById('news');
+    if (!first || !link) return;
+    const item = first.querySelector('.update-items li');
+    link.querySelector('.news-date').textContent = first.querySelector('.update-date').textContent.trim();
+    link.querySelector('.news-text').textContent = item ? item.textContent.trim().split('。')[0] : '';
+    link.hidden = false;
   })();
 
   // ====== Visitor count (GoatCounter): site total, cached up to 4h ======
