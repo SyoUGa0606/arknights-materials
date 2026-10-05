@@ -732,6 +732,25 @@
     padding: 2px 5px;
     border-radius: 2px;
   }
+  /* 入手方法（恒常 / 限定 / 配布）— Wiki の表記はカードの title に出す */
+  .op-obtain {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    padding: 0 4px;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    background: rgba(8,10,12,0.78);
+    pointer-events: none;
+  }
+  .op-obtain.is-standard { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.18); }
+  .op-obtain.is-limited  { color: #ffcf5c; border-color: rgba(255,207,92,0.6); }
+  .op-obtain.is-gift     { color: #7fd4ff; border-color: rgba(127,212,255,0.55); }
 
   .op-name {
     font-size: 12px;
@@ -2232,12 +2251,14 @@
  * Operator data — pulled from window.OPERATORS (auto-generated
  * from the Django DB). Each entry has:
  *   { id, name, rarity, stars, class, classKey, branch,
- *     order, released, cnReleased, isNew, limited? }
+ *     order, released, cnReleased, isNew, limited?, obtain?, obtainText? }
  * order = implementation order (JP release order, then CN-only
  * operators by CN release date); isNew = first appeared in the
  * latest monthly update (window.DATA_INFO.updated).
  * limited = only on reference-only operators outside the release
  * history (e.g. '統合戦略・保全駐在限定'); they have no costs and no order.
+ * obtain = 'standard' | 'limited' | 'gift' (恒常 / 限定 / 配布), classified
+ * from the wiki's 入手方法 (obtainText) by dump_operators.
  * Place 180x180 PNGs at assets/operators/{id}.png to show
  * portraits; missing files fall back to the placeholder SVG.
  * ============================================================ */
@@ -2276,6 +2297,13 @@ function loadSort() {
 }
 function saveSort(v) {
   try { localStorage.setItem(SORT_STORAGE_KEY, v); } catch (_) { /* storage unavailable */ }
+}
+
+const OBTAIN_LABELS = { standard: '恒常', limited: '限定', gift: '配布' };
+
+/* Escape wiki-derived text before putting it into HTML / attributes. */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
 function fmtDate(iso) {
@@ -2349,9 +2377,10 @@ function cardHtml(op) {
   const count = selectionCount(op.id);
   const active = count > 0 ? ' is-active' : '';
   const isNew = op.isNew ? ' is-new' : '';
-  const release = releaseLabel(op);
+  const tip = [releaseLabel(op), op.obtainText ? `入手方法：${op.obtainText}` : ''].filter(Boolean).map(esc).join('&#10;');
+  const obtain = OBTAIN_LABELS[op.obtain];
   return `
-    <div class="op-card${active}${isNew}" data-id="${op.id}" tabindex="0" role="button" aria-pressed="${count > 0}"${release ? ` title="${release}"` : ''}>
+    <div class="op-card${active}${isNew}" data-id="${op.id}" tabindex="0" role="button" aria-pressed="${count > 0}"${tip ? ` title="${tip}"` : ''}>
       ${op.isNew ? '<span class="op-new-tag" aria-label="新規追加">NEW</span>' : ''}
       ${op.limited ? `<span class="op-limited-tag" aria-label="${op.limited}">限定</span>` : ''}
       <span class="op-badge" aria-label="${count}項目選択中">${count}</span>
@@ -2359,6 +2388,7 @@ function cardHtml(op) {
         ${imgFor(op)}
         <span class="op-class" title="${op.class}">${classIcon(op.classKey)}</span>
         <span class="op-class-label">${op.class}</span>
+        ${obtain ? `<span class="op-obtain is-${op.obtain}" aria-label="入手方法：${obtain}">${obtain}</span>` : ''}
       </div>
       <div class="op-name">${op.name}</div>
       ${starsRow(op.stars, op.rarity)}
