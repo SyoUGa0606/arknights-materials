@@ -1405,7 +1405,11 @@
     letter-spacing: 0.32em;
     color: rgba(255, 255, 255, 0.4);
     margin-left: 6px;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
+  .modal-group-heading::before { flex-shrink: 0; }
+  .modal-group-heading .ja { min-width: 0; line-height: 1.5; }
 
   .checks {
     display: grid;
@@ -3012,9 +3016,11 @@ function moduleSectionHtml(mod, savedKeys) {
     const key = `module-${mod.slot}-${level}`;
     return checkToggleHtml(key, label, savedKeys.has(key));
   }).join('');
-  const subtitle = mod.name ? `<span class="en">${mod.name}</span>` : '';
+  // 見出しは「CEN-X：熱く燃える心臓と武器」（Wiki の名前が無ければコードだけ、コードも無ければ番号）
+  const code = mod.name || `モジュール${mod.slot}`;
+  const heading = mod.title ? `${esc(code)}：${esc(mod.title)}` : esc(code);
   return `<div class="modal-group">
-    <h4 class="modal-group-heading">モジュール${mod.slot} ${subtitle}</h4>
+    <h4 class="modal-group-heading"><span class="ja">${heading}</span> <span class="en">MODULE ${mod.slot}</span></h4>
     <div class="checks" data-group="module-${mod.slot}">${checks}</div>
   </div>`;
 }
