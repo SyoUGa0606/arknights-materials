@@ -1475,6 +1475,39 @@
     border-color: rgba(214, 255, 58, 0.4);
   }
 
+  /* 各段階に必要な素材（チェックの下に小さなアイコン×個数。素材名・正確な個数はホバーで出る） */
+  .check-toggle.has-mats {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    row-gap: 8px;
+  }
+  .check-mats {
+    flex: 1 0 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .check-mat {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    font-family: "Oswald", "Noto Sans JP", sans-serif;
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+  }
+  .check-mat img {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    object-fit: contain;
+  }
+  .check-toggle:has(input:checked) .check-mat { color: #fff; }
+
   /* モジュールの説明（▽ で開閉。中身は最初に開いたときに assets/modules.js から読む） */
   .mod-desc-toggle {
     display: inline-flex;
@@ -3055,18 +3088,46 @@ function getRarityRules(operator) {
 
 const CHECK_SVG = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6 L5 9 L10 3"/></svg>';
 
-function checkToggleHtml(key, label, checked) {
-  return `<label class="check-toggle">
+function checkToggleHtml(key, label, checked, op) {
+  const mats = op ? stepMatsHtml(itemCosts(key, op)) : '';
+  return `<label class="check-toggle${mats ? ' has-mats' : ''}">
     <input type="checkbox" data-key="${key}"${checked ? ' checked' : ''} />
     <span class="box">${CHECK_SVG}</span>
-    <span class="label">${label}</span>
+    <span class="label">${label}</span>${mats}
   </label>`;
 }
 
-function groupHtml(titleJa, titleEn, group, items, labelFn, savedKeys) {
+/* その育成項目（例 'skill-2-3'）で使う素材。slug → 個数 */
+function itemCosts(key, op) {
+  const out = {};
+  expandItem(key, op).forEach((k) => {
+    Object.entries((op.costs || {})[k] || {}).forEach(([slug, qty]) => {
+      out[slug] = (out[slug] || 0) + qty;
+    });
+  });
+  return out;
+}
+
+/* チェックの下に出す素材（小さなアイコン×個数）。
+   並びは SoC・アーツ学・モジュール素材 → 必要素材（ティアの高い順）→ 龍門幣。1万以上は「12万」のように縮める */
+const STEP_MAT_GROUP = { soc: 0, exp: 1, module_data: 2, currency: 4 }; // それ以外（必要素材）は 3
+const fmtQtyShort = (n) => (n >= 10000 ? `${+(n / 10000).toFixed(1)}万` : fmtNum(n));
+
+function stepMatsHtml(costs) {
+  const slugs = Object.keys(costs).filter((s) => costs[s] > 0);
+  if (!slugs.length) return '';
+  const group = (s) => STEP_MAT_GROUP[matMeta(s).category] ?? 3;
+  slugs.sort((a, b) => (group(a) - group(b)) || compareMaterials(a, b));
+  return `<span class="check-mats">${slugs.map((s) => {
+    const name = esc(matMeta(s).name);
+    return `<span class="check-mat" title="${name} ×${fmtNum(costs[s])}"><img src="assets/materials/${s}.png" alt="${name}" loading="lazy" onerror="this.style.visibility='hidden'">×${fmtQtyShort(costs[s])}</span>`;
+  }).join('')}</span>`;
+}
+
+function groupHtml(titleJa, titleEn, group, items, labelFn, savedKeys, op) {
   if (!items.length) return '';
   const checks = items.map((n) =>
-    checkToggleHtml(`${group}-${n}`, labelFn(n), savedKeys.has(`${group}-${n}`))
+    checkToggleHtml(`${group}-${n}`, labelFn(n), savedKeys.has(`${group}-${n}`), op)
   ).join('');
   return `<div class="modal-group">
     <h4 class="modal-group-heading">${titleJa} <span class="en">${titleEn}</span></h4>
@@ -3084,7 +3145,7 @@ function skillSectionHtml(skillNo, op, savedKeys) {
   if (!levels.length) return '';
   const checks = levels.map((lv) => {
     const key = `skill-${skillNo}-${lv}`;
-    return checkToggleHtml(key, `特化${lv}`, savedKeys.has(key));
+    return checkToggleHtml(key, `特化${lv}`, savedKeys.has(key), op);
   }).join('');
   return `<div class="modal-group">
     <h4 class="modal-group-heading">スキル${skillNo} <span class="en">SKILL ${skillNo}</span></h4>
@@ -3092,7 +3153,7 @@ function skillSectionHtml(skillNo, op, savedKeys) {
   </div>`;
 }
 
-function moduleSectionHtml(mod, savedKeys) {
+function moduleSectionHtml(mod, savedKeys, op) {
   // Display only the stages the module actually has (unlock / enhance_2 / enhance_3).
   const items = [];
   if ((mod.stages || []).includes('unlock'))    items.push({ level: 1, label: 'アンロック' });
@@ -3101,7 +3162,7 @@ function moduleSectionHtml(mod, savedKeys) {
   if (!items.length) return '';
   const checks = items.map(({ level, label }) => {
     const key = `module-${mod.slot}-${level}`;
-    return checkToggleHtml(key, label, savedKeys.has(key));
+    return checkToggleHtml(key, label, savedKeys.has(key), op);
   }).join('');
   // 見出しは「CEN-X：熱く燃える心臓と武器」（Wiki の名前が無ければコードだけ、コードも無ければ番号）
   const code = mod.name || `モジュール${mod.slot}`;
@@ -3166,14 +3227,14 @@ function moduleDescHtml(levels) {
 
 function buildModalBody(op, savedKeys) {
   const r = getRarityRules(op);
-  let html = groupHtml('昇進', 'PROMOTION', 'promotion', r.promotions, (n) => `昇進${n}`, savedKeys);
+  let html = groupHtml('昇進', 'PROMOTION', 'promotion', r.promotions, (n) => `昇進${n}`, savedKeys, op);
   // Per-skill sections (data-driven; no section if the skill has no costs)
   [1, 2, 3].forEach((skillNo) => {
     html += skillSectionHtml(skillNo, op, savedKeys);
   });
   // Per-module sections
   if (Array.isArray(op.modules)) {
-    op.modules.forEach((mod) => { html += moduleSectionHtml(mod, savedKeys); });
+    op.modules.forEach((mod) => { html += moduleSectionHtml(mod, savedKeys, op); });
   }
   modalBody.innerHTML = html || `<p class="modal-empty">${noMaterialsText(op)}</p>`;
 }
