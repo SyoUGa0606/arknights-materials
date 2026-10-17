@@ -56,6 +56,11 @@
     overflow-x: hidden;
     min-height: 100vh;
   }
+  /* モーダルを開いている間は後ろのページをスクロールさせない。html に overflow-x: hidden があるので
+     ページをスクロールしているのは body ではなく html（body の overflow では止まらない）。
+     スクロールバーが消えて横にずれないよう、バーの溝は常に残す */
+  html { scrollbar-gutter: stable; }
+  html.scroll-lock { overflow: hidden; }
 
   /* ======== Decorative background ======== */
   .bg-stage {
@@ -1297,6 +1302,7 @@
     max-width: 680px;
     max-height: 90vh;
     overflow-y: auto;
+    overscroll-behavior: contain; /* モーダルの端まで来ても後ろのページへスクロールを渡さない */
     background: linear-gradient(180deg, rgba(28, 34, 40, 0.96) 0%, rgba(14, 18, 22, 0.98) 100%);
     border: 1px solid rgba(214, 255, 58, 0.4);
     border-radius: 8px;
@@ -2982,7 +2988,7 @@ function openCraft(slug) {
     craftBackdrop.classList.add('is-open');
     craftOkBtn.focus();
   });
-  document.body.style.overflow = 'hidden';
+  syncScrollLock();
 }
 
 function closeCraft() {
@@ -2990,7 +2996,7 @@ function closeCraft() {
   craftBackdrop.classList.remove('is-open');
   craftHideTimer = setTimeout(() => {
     craftBackdrop.hidden = true;
-    document.body.style.overflow = '';
+    syncScrollLock();
   }, 200);
   if (craftReturnFocus && document.contains(craftReturnFocus)) craftReturnFocus.focus({ preventScroll: true });
   craftReturnFocus = null;
@@ -3493,7 +3499,7 @@ function openModal(opId) {
 
   modalBackdrop.hidden = false;
   requestAnimationFrame(() => modalBackdrop.classList.add('is-open'));
-  document.body.style.overflow = 'hidden';
+  syncScrollLock();
 }
 
 function closeModal() {
@@ -3502,8 +3508,14 @@ function closeModal() {
   setTimeout(() => {
     modalBackdrop.hidden = true;
     state.modalOpId = null;
-    document.body.style.overflow = '';
+    syncScrollLock();
   }, 200);
+}
+
+// モーダル（育成項目・加工の確認）のどちらかが出ている間は、後ろのページをスクロールさせない
+function syncScrollLock() {
+  const open = !modalBackdrop.hidden || !craftBackdrop.hidden;
+  document.documentElement.classList.toggle('scroll-lock', open);
 }
 
 function commitModal() {
