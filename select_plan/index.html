@@ -1594,6 +1594,107 @@
   .mod-desc-foot .src { margin-left: auto; }
   .mod-desc-foot a { color: rgba(255, 255, 255, 0.62); text-decoration: underline; text-underline-offset: 2px; }
   .mod-desc-foot a:hover { color: var(--accent); }
+  .mod-desc .d-note { color: #ffb15c; }
+  .mod-desc .d-neg { color: #ff8080; }
+  .mod-desc .d-sub { color: rgba(255, 255, 255, 0.5); font-size: 0.92em; }
+
+  /* スキル：見出しのアイコン・発動タグと ▽ の説明（説明は最初に開いたときに assets/skills.js から読む） */
+  .skill-icon {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .skill-icon img { width: 100%; height: 100%; object-fit: contain; }
+  .skill-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .skill-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .skill-tag {
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    padding: 3px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 2px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .skill-tag.sp-auto    { color: #8fe070; border-color: rgba(143, 224, 112, 0.4); }
+  .skill-tag.sp-attack  { color: #ffaa5c; border-color: rgba(255, 170, 92, 0.4); }
+  .skill-tag.sp-defense { color: #f2d45e; border-color: rgba(242, 212, 94, 0.4); }
+  .skill-desc-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px 18px;
+    padding: 10px 14px 11px;
+  }
+  .skill-desc-main .mod-desc-text { flex: 1 1 260px; min-width: 0; }
+  .sk-slot {
+    color: var(--accent);
+    background: rgba(214, 255, 58, 0.08);
+    border-radius: 2px;
+    padding: 0 3px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .sk-no { font-size: 0.85em; font-weight: 400; margin-right: 2px; }
+  .sk-ranges { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 12px; }
+  .sk-ranges-title { flex: 1 0 100%; font-size: 10.5px; line-height: 1; color: rgba(255, 255, 255, 0.45); }
+  .sk-range { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sk-grid { display: grid; grid-template-columns: repeat(var(--w), 9px); grid-auto-rows: 9px; gap: 1px; }
+  .sk-grid i { display: block; font-style: normal; }
+  .sk-grid .r { border: 1px solid rgba(255, 255, 255, 0.55); }
+  .sk-grid .h { border: 1px solid #4ad6ff; background: rgba(74, 214, 255, 0.3); }
+  .sk-grid .s { background: var(--accent); }
+  .sk-grid .x { font-size: 9px; line-height: 9px; text-align: center; color: #ff8080; }
+  .sk-range figcaption { max-width: 120px; font-size: 10px; line-height: 1.35; text-align: center; color: rgba(255, 255, 255, 0.5); }
+  .sk-table-wrap { overflow-x: auto; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .sk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Oswald", "Noto Sans JP", sans-serif;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .sk-table th {
+    padding: 7px 8px 5px;
+    font-weight: 400;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.45);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .sk-table th.slot { color: var(--accent); }
+  .sk-table td { padding: 3px 8px; color: rgba(255, 255, 255, 0.42); transition: background 0.2s ease; }
+  .sk-table td.up { color: rgba(255, 255, 255, 0.92); }
+  .sk-table th:first-child,
+  .sk-table td:first-child { text-align: left; padding-left: 14px; color: rgba(255, 255, 255, 0.7); }
+  .sk-table tr.m-start td { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+  .sk-table tbody tr:last-child td { padding-bottom: 7px; }
+  /* チェックを入れた特化の行を強調（キーは skill-<番号>-<特化>。data-m は特化I〜III = 1〜3） */
+  .modal-group:has(input[data-key$="-1"]:checked) [data-m~="1"],
+  .modal-group:has(input[data-key$="-2"]:checked) [data-m~="2"],
+  .modal-group:has(input[data-key$="-3"]:checked) [data-m~="3"] { background: rgba(214, 255, 58, 0.06); }
+  .modal-group:has(input[data-key$="-1"]:checked) tr[data-m~="1"] td:first-child,
+  .modal-group:has(input[data-key$="-2"]:checked) tr[data-m~="2"] td:first-child,
+  .modal-group:has(input[data-key$="-3"]:checked) tr[data-m~="3"] td:first-child,
+  .modal-group:has(input[data-key$="-1"]:checked) .mod-desc-lv[data-m~="1"] .lv,
+  .modal-group:has(input[data-key$="-2"]:checked) .mod-desc-lv[data-m~="2"] .lv,
+  .modal-group:has(input[data-key$="-3"]:checked) .mod-desc-lv[data-m~="3"] .lv { color: var(--accent); }
+  .modal-group:has(input[data-key$="-1"]:checked) tr[data-m~="1"] td:first-child,
+  .modal-group:has(input[data-key$="-2"]:checked) tr[data-m~="2"] td:first-child,
+  .modal-group:has(input[data-key$="-3"]:checked) tr[data-m~="3"] td:first-child,
+  .modal-group:has(input[data-key$="-1"]:checked) .mod-desc-lv[data-m~="1"],
+  .modal-group:has(input[data-key$="-2"]:checked) .mod-desc-lv[data-m~="2"],
+  .modal-group:has(input[data-key$="-3"]:checked) .mod-desc-lv[data-m~="3"] { box-shadow: inset 2px 0 0 var(--accent); }
 
   .modal-footer {
     display: flex;
@@ -1923,6 +2024,9 @@
     .modal-footer { flex-wrap: wrap; gap: 10px; }
     .modal-actions { width: 100%; justify-content: stretch; }
     .modal-action { flex: 1; padding: 10px 8px; letter-spacing: 0.04em; white-space: nowrap; }
+    .skill-desc-main { padding: 10px 12px 11px; }
+    .sk-table th, .sk-table td { padding-left: 6px; padding-right: 6px; }
+    .sk-table th:first-child, .sk-table td:first-child { padding-left: 12px; }
   }
   @media (max-width: 540px) {
     .jump-to-mats {
@@ -3147,9 +3251,21 @@ function skillSectionHtml(skillNo, op, savedKeys) {
     const key = `skill-${skillNo}-${lv}`;
     return checkToggleHtml(key, `特化${lv}`, savedKeys.has(key), op);
   }).join('');
+  // 見出しは「[アイコン] スキル2：スカイスマッシュ」＋発動タグ（Wiki の情報が無ければ「スキル2」だけ）
+  const sk = (op.skills || []).find((s) => s.no === skillNo) || {};
+  const icon = sk.icon
+    ? `<span class="skill-icon"><img src="assets/skills/${esc(sk.icon)}" alt="" width="36" height="36" loading="lazy" onerror="this.style.visibility='hidden'"></span>`
+    : '';
+  const tags = (sk.tags || []).map((t) => `<span class="skill-tag ${SKILL_TAG_CLASS[t] || ''}">${esc(t)}</span>`).join('');
+  const name = sk.name ? `スキル${skillNo}：${esc(sk.name)}` : `スキル${skillNo}`;
+  const desc = sk.name
+    ? `<button type="button" class="mod-desc-toggle" aria-expanded="false" aria-controls="skill-desc-${skillNo}" data-skill="${skillNo}"><span class="tri" aria-hidden="true">▽</span>説明（Rank1〜特化III）</button>
+    <div class="mod-desc" id="skill-desc-${skillNo}" hidden></div>`
+    : '';
   return `<div class="modal-group">
-    <h4 class="modal-group-heading">スキル${skillNo} <span class="en">SKILL ${skillNo}</span></h4>
+    <h4 class="modal-group-heading">${icon}<span class="skill-title"><span class="ja">${name}</span>${tags ? `<span class="skill-tags">${tags}</span>` : ''}</span> <span class="en">SKILL ${skillNo}</span></h4>
     <div class="checks" data-group="skill-${skillNo}">${checks}</div>
+    ${desc}
   </div>`;
 }
 
@@ -3175,33 +3291,39 @@ function moduleSectionHtml(mod, savedKeys, op) {
   </div>`;
 }
 
-/* ----- モジュールの説明（▽ で開閉） -----
-   説明は assets/modules.js（window.MODULE_DESC、約 370KB）にあり、最初に ▽ を押したときだけ読む。
-   file:// でも動くように fetch ではなく <script> で読む。中身は Wiki の文なので必ず esc() を通す */
+/* ----- モジュール・スキルの説明（▽ で開閉） -----
+   説明は assets/modules.js（window.MODULE_DESC、約 370KB）と assets/skills.js（window.SKILL_DESC、約 520KB）
+   にあり、最初に ▽ を押したときだけ読む。file:// でも動くように fetch ではなく <script> で読む。
+   中身は Wiki の文なので必ず esc() を通す */
 const MODULE_STAGE_LABEL = { 1: 'アンロック', 2: '強化2', 3: '強化3' };
-let moduleDescPromise = null;
+const descScriptPromises = {};
 
-function loadModuleDesc() {
-  if (window.MODULE_DESC) return Promise.resolve(window.MODULE_DESC);
-  if (!moduleDescPromise) {
-    moduleDescPromise = new Promise((resolve, reject) => {
+function loadDescScript(name, globalName) {
+  if (window[globalName]) return Promise.resolve(window[globalName]);
+  if (!descScriptPromises[name]) {
+    descScriptPromises[name] = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = `assets/modules.js?v=${encodeURIComponent(DATA_INFO.updated || '')}`;
-      s.onload = () => (window.MODULE_DESC ? resolve(window.MODULE_DESC) : reject(new Error('empty')));
+      s.src = `assets/${name}.js?v=${encodeURIComponent(DATA_INFO.updated || '')}`;
+      s.onload = () => (window[globalName] ? resolve(window[globalName]) : reject(new Error('empty')));
       s.onerror = () => { s.remove(); reject(new Error('load')); };
       document.head.appendChild(s);
-    }).catch((err) => { moduleDescPromise = null; throw err; }); // 失敗したら次に開いたとき読み直す
+    }).catch((err) => { descScriptPromises[name] = null; throw err; }); // 失敗したら次に開いたとき読み直す
   }
-  return moduleDescPromise;
+  return descScriptPromises[name];
 }
+const loadModuleDesc = () => loadDescScript('modules', 'MODULE_DESC');
+const loadSkillDesc = () => loadDescScript('skills', 'SKILL_DESC');
 
 // b = [[文, 種類?], ...]。種類：無し 通常 / 'hl' 元の特性・素質から変わる箇所 / 'diff' 緑の [+n] / 'em' 青字
+// （スキル）'note' 橙字 / 'neg' 赤字 / 'sub' 灰色。種類の無い文は [文] でなく文字列のこともある（skills.js）
 function descRunsHtml(runs) {
-  return runs.map(([text, kind]) => {
+  return runs.map((run) => {
+    const [text, kind] = typeof run === 'string' ? [run, ''] : run;
     const h = esc(text).replace(/\n/g, '<br>');
     if (kind === 'hl') return `<mark class="d-hl">${h}</mark>`;
-    if (kind === 'diff') return `<span class="d-diff">${h}</span>`;
-    if (kind === 'em') return `<span class="d-em">${h}</span>`;
+    if (kind === 'diff' || kind === 'em' || kind === 'note' || kind === 'neg' || kind === 'sub') {
+      return `<span class="d-${kind}">${h}</span>`;
+    }
     return h;
   }).join('');
 }
@@ -3223,6 +3345,104 @@ function moduleDescHtml(levels) {
       <span><span class="d-diff">[+n]</span>＝元の値からの増加量</span>
       <span class="src">出典：<a href="https://arknights.wikiru.jp/" target="_blank" rel="noopener">アークナイツ攻略 Wiki</a></span>
     </div>`;
+}
+
+/* スキルの説明。形式は backend/materials/skill_desc.py の build()：
+   t = 本文（文字列 / [文, 種類] / [スロット番号, 種類]）、l = Rank ごとに [列の値…, スロットの値…]、
+   c = 列名、r = Rank 名（既定と違うときだけ）、g = 攻撃範囲、f = まとめられないスキルの Rank ごとの全文。
+   本文は1回だけ出し、Rank で変わる値（スロット）は ①② と「最初→最後」で示して、下の表に Rank ごとの値を並べる */
+const SKILL_TAG_CLASS = { 自動回復: 'sp-auto', 攻撃回復: 'sp-attack', 被撃回復: 'sp-defense' };
+const SKILL_COLS = ['初期SP', '必要SP', '持続'];
+const SKILL_RANKS = ['1', '2', '3', '4', '5', '6', '7', '特化I', '特化II', '特化III'];
+const MASTERY_OF_RANK = { 特化I: 1, 特化II: 2, 特化III: 3 };
+const CIRCLED = '①②③④⑤⑥⑦⑧⑨⑩';
+const SKILL_SRC = '<span class="src">出典：<a href="https://arknights.wikiru.jp/" target="_blank" rel="noopener">アークナイツ攻略 Wiki</a></span>';
+
+const rankLabel = (r) => (/^\d+$/.test(r) ? `Rank${r}` : r);
+
+function skillRangesHtml(ranges) {
+  if (!Array.isArray(ranges) || !ranges.length) return '';
+  const CELL = { S: 's', R: 'r', H: 'h', X: 'x' };
+  const figs = ranges.map((g) => {
+    const rows = g.rows || [];
+    const w = Math.max(1, ...rows.map((row) => row.length));
+    const cells = rows.map((row) => Array.from(row.padEnd(w, '.')).map((c) =>
+      (CELL[c] ? `<i class="${CELL[c]}">${c === 'X' ? '×' : ''}</i>` : '<i></i>')).join('')).join('');
+    return `<figure class="sk-range"><div class="sk-grid" style="--w:${w}" role="img" aria-label="攻撃範囲${g.labels ? `（${esc(g.labels)}）` : ''}">${cells}</div>${g.labels ? `<figcaption>${esc(g.labels)}</figcaption>` : ''}</figure>`;
+  }).join('');
+  return `<div class="sk-ranges"><span class="sk-ranges-title">攻撃範囲</span>${figs}</div>`;
+}
+
+function skillDescHtml(d) {
+  if (!d) return '<p class="mod-desc-msg">このスキルの説明はまだありません。</p>';
+  const cols = d.c || SKILL_COLS;
+  const ranks = d.r || SKILL_RANKS;
+  const rows = d.l || [];
+  const nc = cols.length;
+  const ranges = skillRangesHtml(d.g);
+  const units = {};   // スロット番号 → 直後の '%'（値に含めて「220→340%」「220%」と出す）
+  let body;
+  let slotNos = [];
+  if (Array.isArray(d.f)) {
+    // まとめられないスキル：同じ文が続く Rank をまとめて全文を出す
+    const blocks = [];
+    d.f.forEach((runs, i) => {
+      const key = JSON.stringify(runs);
+      const last = blocks[blocks.length - 1];
+      if (last && last.key === key) last.end = i;
+      else blocks.push({ key, runs, start: i, end: i });
+    });
+    body = (ranges ? `<div class="skill-desc-main">${ranges}</div>` : '') + blocks.map((b) => {
+      const ms = ranks.slice(b.start, b.end + 1).map((r) => MASTERY_OF_RANK[r]).filter(Boolean);
+      const label = b.start === b.end ? rankLabel(ranks[b.start]) : `${rankLabel(ranks[b.start])}〜${rankLabel(ranks[b.end])}`;
+      return `<div class="mod-desc-lv"${ms.length ? ` data-m="${ms.join(' ')}"` : ''}>
+        <div class="mod-desc-head"><span class="lv">${esc(label)}</span></div>
+        <p class="mod-desc-text">${descRunsHtml(b.runs)}</p>
+      </div>`;
+    }).join('');
+  } else {
+    const items = (d.t || []).map((x) => (typeof x === 'string' ? { text: x, kind: '' }
+      : typeof x[0] === 'number' ? { slot: x[0] } : { text: x[0], kind: x[1] || '' }));
+    items.forEach((it, i) => {
+      const next = items[i + 1];
+      if (it.slot != null && next && next.text && next.text.startsWith('%')) {
+        units[it.slot] = '%';
+        next.text = next.text.slice(1);
+      }
+    });
+    const val = (li, n) => ((rows[li] || [])[nc + n] || '');
+    const html = items.map((it) => {
+      if (it.slot == null) return descRunsHtml([[it.text, it.kind]]);
+      slotNos.push(it.slot);
+      const first = val(0, it.slot);
+      const last = val(rows.length - 1, it.slot);
+      const range = first === last ? (first || '…') : `${first || '—'} → ${last || '—'}`;
+      return `<span class="sk-slot"><span class="sk-no">${CIRCLED[it.slot] || ''}</span>${esc(range + (units[it.slot] || ''))}</span>`;
+    }).join('');
+    body = `<div class="skill-desc-main"><p class="mod-desc-text">${html}</p>${ranges}</div>`;
+  }
+  // Rank ごとの表：中身のある列（すべて「-」の列は省く）＋スロット。前の Rank から変わった値は明るく
+  const colIdx = cols.map((_, i) => i).filter((i) => rows.some((r) => r[i] && r[i] !== '-'));
+  const idx = colIdx.concat(slotNos.map((n) => nc + n));
+  let table = '';
+  if (idx.length && rows.length) {
+    const head = '<th>Rank</th>' + colIdx.map((i) => `<th>${esc(cols[i])}</th>`).join('')
+      + slotNos.map((n) => `<th class="slot">${CIRCLED[n] || ''}</th>`).join('');
+    const body2 = rows.map((r, li) => {
+      const m = MASTERY_OF_RANK[ranks[li]];
+      const cells = idx.map((ci) => {
+        const v = r[ci] || '';
+        const up = li === 0 || v !== (rows[li - 1][ci] || '');
+        const txt = v && v !== '-' ? esc(v + (ci >= nc ? (units[ci - nc] || '') : '')) : '—';
+        return `<td${up ? ' class="up"' : ''}>${txt}</td>`;
+      }).join('');
+      return `<tr${m ? ` data-m="${m}"` : ''}${m === 1 ? ' class="m-start"' : ''}><td>${esc(ranks[li] || '')}</td>${cells}</tr>`;
+    }).join('');
+    table = `<div class="sk-table-wrap"><table class="sk-table"><thead><tr>${head}</tr></thead><tbody>${body2}</tbody></table></div>`;
+  }
+  const legend = slotNos.length ? '<span><span class="sk-slot"><span class="sk-no">①</span></span>＝Rank で変わる値（表の同じ番号の列）</span>' : '';
+  const legend2 = table ? '<span>表の明るい数字＝前の Rank から変わった値</span>' : '';
+  return `${body}${table}<div class="mod-desc-foot">${legend}${legend2}${SKILL_SRC}</div>`;
 }
 
 function buildModalBody(op, savedKeys) {
@@ -3312,7 +3532,7 @@ function updateModalCount() {
 modalBody.addEventListener('change', (e) => {
   if (e.target.matches('input[type="checkbox"]')) updateModalCount();
 });
-// モジュールの説明の ▽（開くたびに閉じた状態から始まる。モーダルを開き直すと作り直すため）
+// モジュール・スキルの説明の ▽（開くたびに閉じた状態から始まる。モーダルを開き直すと作り直すため）
 modalBody.addEventListener('click', async (e) => {
   const btn = e.target.closest('.mod-desc-toggle');
   if (!btn) return;
@@ -3324,10 +3544,13 @@ modalBody.addEventListener('click', async (e) => {
   if (!open || panel.dataset.loaded) return;
   const opId = state.modalOpId;
   panel.innerHTML = '<p class="mod-desc-msg">読み込み中…</p>';
+  const isSkill = btn.dataset.skill != null;
   try {
-    const all = await loadModuleDesc();
+    const all = await (isSkill ? loadSkillDesc() : loadModuleDesc());
     if (!panel.isConnected || state.modalOpId !== opId) return; // 読み込み中に閉じた・別のオペを開いた
-    panel.innerHTML = moduleDescHtml((all[opId] || {})[btn.dataset.slot]);
+    panel.innerHTML = isSkill
+      ? skillDescHtml((all[opId] || {})[btn.dataset.skill])
+      : moduleDescHtml((all[opId] || {})[btn.dataset.slot]);
     panel.dataset.loaded = '1';
   } catch (_) {
     if (!panel.isConnected) return;
