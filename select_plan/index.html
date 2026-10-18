@@ -1368,6 +1368,70 @@
     letter-spacing: 0.16em;
   }
 
+  /* モーダル上部の表示の切り替え（素材・スキル説明）。育成項目のチェックと見分けが付くようスイッチの形にする */
+  .modal-view {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin: -10px 0 18px; /* 上の .modal-subtitle の余白に寄せる */
+  }
+  .modal-view[hidden],
+  .view-switch[hidden] { display: none; }
+  .view-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+  }
+  .view-switch input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .view-switch .track {
+    position: relative;
+    width: 30px;
+    height: 16px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .view-switch .track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  .view-switch input:checked + .track {
+    background: rgba(214, 255, 58, 0.16);
+    border-color: var(--accent);
+  }
+  .view-switch input:checked + .track::after {
+    transform: translateX(14px);
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+  .view-switch:has(input:checked) { color: rgba(255, 255, 255, 0.88); }
+  .view-switch:hover { color: var(--accent); }
+  .view-switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* 切り替えで隠すもの（.modal に付けるクラス。チェックの状態・選択数は変わらない） */
+  .modal.hide-mats .check-mats { display: none; }
+  .modal.hide-skill-desc .mod-desc-toggle[data-skill],
+  .modal.hide-skill-desc .mod-desc[id^="skill-desc-"] { display: none; }
+
   .modal-divider {
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 10%, rgba(255,255,255,0.18) 90%, transparent);
@@ -2438,6 +2502,12 @@
       <span id="modalRarity">★6</span>
     </div>
 
+    <!-- 表示の切り替え（#modalBody の外に置く。modalChecks() の育成項目に数えないため） -->
+    <div class="modal-view" id="modalView" role="group" aria-label="表示の切り替え">
+      <label class="view-switch" id="viewMatsSwitch"><input type="checkbox" role="switch" id="viewMats" /><span class="track" aria-hidden="true"></span>素材を表示</label>
+      <label class="view-switch" id="viewSkillDescSwitch"><input type="checkbox" role="switch" id="viewSkillDesc" /><span class="track" aria-hidden="true"></span>スキル説明を表示</label>
+    </div>
+
     <hr class="modal-divider" />
 
     <!-- groups are rendered dynamically per operator rarity -->
@@ -2533,6 +2603,22 @@ function saveSort(v) {
   try { localStorage.setItem(SORT_STORAGE_KEY, v); } catch (_) { /* storage unavailable */ }
 }
 
+// モーダルの表示の切り替え（素材・スキル説明）。ブラウザに保存して、次に開いたときも同じ表示にする
+const VIEW_STORAGE_KEYS = { mats: 'select_plan.view.mats', skillDesc: 'select_plan.view.skillDesc' };
+const VIEW_DEFAULTS = { mats: true, skillDesc: false };
+
+function loadView(name) {
+  try {
+    const v = localStorage.getItem(VIEW_STORAGE_KEYS[name]);
+    return v === '1' ? true : v === '0' ? false : VIEW_DEFAULTS[name];
+  } catch (_) {
+    return VIEW_DEFAULTS[name];
+  }
+}
+function saveView(name, on) {
+  try { localStorage.setItem(VIEW_STORAGE_KEYS[name], on ? '1' : '0'); } catch (_) { /* storage unavailable */ }
+}
+
 const OBTAIN_LABELS = { standard: '恒常', limited: '限定', gift: '配布' };
 
 /* Escape wiki-derived text before putting it into HTML / attributes. */
@@ -2568,6 +2654,12 @@ const modalRarity = document.getElementById('modalRarity');
 const modalCount = document.getElementById('modalCount');
 const modalBody = document.getElementById('modalBody');
 const modalChecks = () => modalBody.querySelectorAll('input[type="checkbox"]');
+const modalEl = document.getElementById('modal');
+const modalView = document.getElementById('modalView');
+const viewMatsSwitch = document.getElementById('viewMatsSwitch');
+const viewSkillDescSwitch = document.getElementById('viewSkillDescSwitch');
+const viewMatsInput = document.getElementById('viewMats');
+const viewSkillDescInput = document.getElementById('viewSkillDesc');
 
 const STAR_PATH = 'M8 1l2.2 4.5 5 .7-3.6 3.5.9 4.9L8 12.3 3.5 14.6l.9-4.9L.8 6.2l5-.7z';
 
@@ -3496,6 +3588,12 @@ function openModal(opId) {
   modalResetBtn.style.display = selectable ? '' : 'none';
   modalSelectAllBtn.style.display = selectable ? '' : 'none';
   modalDoneBtn.textContent = selectable ? '決定' : '閉じる';
+  // 表示の切り替えは、そのオペに切り替える対象（素材・スキル説明の ▽）があるときだけ出す
+  const hasMats = !!modalBody.querySelector('.check-mats');
+  const hasSkillDesc = !!modalBody.querySelector('.mod-desc-toggle[data-skill]');
+  viewMatsSwitch.hidden = !hasMats;
+  viewSkillDescSwitch.hidden = !hasSkillDesc;
+  modalView.hidden = !hasMats && !hasSkillDesc;
 
   modalBackdrop.hidden = false;
   requestAnimationFrame(() => modalBackdrop.classList.add('is-open'));
@@ -3578,6 +3676,23 @@ modalResetBtn.addEventListener('click', () => {
 modalSelectAllBtn.addEventListener('click', () => {
   modalChecks().forEach((cb) => { cb.checked = true; });
   updateModalCount();
+});
+
+// 表示の切り替え：OFF のものを .modal のクラスで隠す（素材＝各項目の素材アイコン、スキル説明＝スキルの ▽ と説明）
+function applyModalView() {
+  modalEl.classList.toggle('hide-mats', !viewMatsInput.checked);
+  modalEl.classList.toggle('hide-skill-desc', !viewSkillDescInput.checked);
+}
+viewMatsInput.checked = loadView('mats');
+viewSkillDescInput.checked = loadView('skillDesc');
+applyModalView();
+viewMatsInput.addEventListener('change', () => {
+  saveView('mats', viewMatsInput.checked);
+  applyModalView();
+});
+viewSkillDescInput.addEventListener('change', () => {
+  saveView('skillDesc', viewSkillDescInput.checked);
+  applyModalView();
 });
 
 modalBackdrop.addEventListener('click', (e) => {
