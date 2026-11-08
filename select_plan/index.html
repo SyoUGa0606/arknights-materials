@@ -45,6 +45,7 @@
     --rarity-1: #c8c8c8;
     --new: #ff7a45;
     --new-glow: rgba(255, 122, 69, 0.5);
+    --pending: #ffb547;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -825,6 +826,24 @@
   .op-obtain.is-standard { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.18); }
   .op-obtain.is-limited  { color: #ffcf5c; border-color: rgba(255,207,92,0.6); }
   .op-obtain.is-gift     { color: #7fd4ff; border-color: rgba(127,212,255,0.55); }
+  /* 情報確認中（Wiki に育成素材が載っていない・一部しか載っていない。operators.js の pending）— 顔写真の下端の帯 */
+  .op-pending {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 15px;
+    text-align: center;
+    color: var(--pending);
+    background: repeating-linear-gradient(135deg, rgba(8,10,12,0.9) 0 6px, rgba(58,40,12,0.9) 6px 12px);
+    border-top: 1px solid rgba(255, 181, 71, 0.6);
+    pointer-events: none;
+  }
+  .op-portrait.is-pending .op-obtain { bottom: 19px; }
 
   .op-name {
     font-size: 12px;
@@ -987,6 +1006,7 @@
     letter-spacing: 0.2em;
     color: rgba(255, 255, 255, 0.5);
   }
+  .summary-table .op-meta .pending-tag { align-self: flex-start; }
 
   .summary-table .chips {
     display: flex;
@@ -1459,6 +1479,35 @@
     border-radius: 4px;
     margin: 0 0 22px;
   }
+  /* 情報確認中：育成素材が Wiki に載っていない・一部しか載っていない（モーダルの先頭・必要素材合計の先頭に出す） */
+  .modal-empty.is-pending { border-color: rgba(255, 181, 71, 0.55); }
+  .modal-pending,
+  .mat-pending-note {
+    font-size: 12px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.75);
+    padding: 10px 14px;
+    border: 1px dashed rgba(255, 181, 71, 0.55);
+    border-radius: 4px;
+    margin: 0 0 22px;
+  }
+  .mat-pending-note { margin-bottom: 18px; }
+  .pending-tag {
+    display: inline-block;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.5;
+    padding: 0 5px;
+    border: 1px dashed rgba(255, 181, 71, 0.75);
+    border-radius: 2px;
+    color: var(--pending);
+    white-space: nowrap;
+  }
+  .modal-empty .pending-tag,
+  .modal-pending .pending-tag,
+  .mat-pending-note .pending-tag { margin-right: 8px; vertical-align: 1px; }
   .modal-group-heading {
     display: flex;
     align-items: center;
@@ -1587,6 +1636,17 @@
     object-fit: contain;
   }
   .check-toggle:has(input:checked) .check-mat { color: #fff; }
+  /* 情報確認中の段階：素材が一部だけ（選べる。タグを右に）／素材が載っていない（選べない） */
+  .check-toggle .pending-tag { margin-left: auto; }
+  .check-toggle.is-missing,
+  .check-toggle.is-missing:hover {
+    cursor: default;
+    background: transparent;
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .check-toggle.is-missing .box { border-style: dashed; border-color: rgba(255, 255, 255, 0.22); }
+  .check-toggle.is-missing .label { color: rgba(255, 255, 255, 0.5); }
 
   /* モジュールの説明（▽ で開閉。中身は最初に開いたときに assets/modules.js から読む） */
   .mod-desc-toggle {
@@ -2715,18 +2775,21 @@ function cardHtml(op) {
   const count = selectionCount(op.id);
   const active = count > 0 ? ' is-active' : '';
   const isNew = op.isNew ? ' is-new' : '';
-  const tip = [releaseLabel(op), op.obtainText ? `入手方法：${op.obtainText}` : ''].filter(Boolean).map(esc).join('&#10;');
+  const pending = isPendingOp(op);
+  const tip = [releaseLabel(op), op.obtainText ? `入手方法：${op.obtainText}` : '',
+    pending ? '情報確認中：Wiki に育成素材が載っていない項目があります' : ''].filter(Boolean).map(esc).join('&#10;');
   const obtain = OBTAIN_LABELS[op.obtain];
   return `
     <div class="op-card${active}${isNew}" data-id="${op.id}" tabindex="0" role="button" aria-pressed="${count > 0}"${tip ? ` title="${tip}"` : ''}>
       ${op.isNew ? '<span class="op-new-tag" aria-label="新規追加">NEW</span>' : ''}
       ${op.limited ? `<span class="op-limited-tag" aria-label="${op.limited}">限定</span>` : ''}
       <span class="op-badge" aria-label="${count}項目選択中">${count}</span>
-      <div class="op-portrait">
+      <div class="op-portrait${pending ? ' is-pending' : ''}">
         ${imgFor(op)}
         <span class="op-class" title="${op.class}">${classIcon(op.classKey)}</span>
         <span class="op-class-label">${op.class}</span>
         ${obtain ? `<span class="op-obtain is-${op.obtain}" aria-label="入手方法：${obtain}">${obtain}</span>` : ''}
+        ${pending ? '<span class="op-pending">情報確認中</span>' : ''}
       </div>
       <div class="op-name">${op.name}</div>
       ${starsRow(op.stars, op.rarity)}
@@ -2847,6 +2910,7 @@ function renderSummary() {
           <div class="op-meta">
             <div class="name">${op.name}</div>
             <div class="meta">★${op.rarity} · ${op.class}</div>
+            ${hasPendingSelection(op, set) ? PENDING_TAG : ''}
           </div>
         </div>
       </td>
@@ -3030,7 +3094,12 @@ function renderMaterialSummary() {
           </div>`;
   };
 
-  let html = craftBarHtml(applied, slugs.some((s) => RECIPES[s]));
+  // 情報確認中（素材が一部しか載っていない段階）を選んでいるオペ → 合計が少なく出ることを先頭で知らせる
+  const pendingOps = OPERATORS.filter((o) => selections.has(o.id) && hasPendingSelection(o, selections.get(o.id)));
+  let html = pendingOps.length
+    ? `<p class="mat-pending-note">${PENDING_TAG}${pendingOps.map((o) => esc(o.name)).join('・')} の選択した項目に、Wiki に素材が一部しか載っていないもの（情報確認中）があります。その分、合計が実際より少なくなります。</p>`
+    : '';
+  html += craftBarHtml(applied, slugs.some((s) => RECIPES[s]));
   MAT_CATEGORY_ORDER.forEach((cat) => {
     const items = grouped[cat];
     if (!items || !items.length) return;
@@ -3304,11 +3373,20 @@ const CHECK_SVG = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" st
 
 function checkToggleHtml(key, label, checked, op) {
   const mats = op ? stepMatsHtml(itemCosts(key, op)) : '';
-  return `<label class="check-toggle${mats ? ' has-mats' : ''}">
+  const pending = isPendingItem(key, op);
+  return `<label class="check-toggle${mats ? ' has-mats' : ''}${pending ? ' is-pending' : ''}"${pending ? ' title="Wiki に素材が一部しか載っていません（情報確認中）"' : ''}>
     <input type="checkbox" data-key="${key}"${checked ? ' checked' : ''} />
     <span class="box">${CHECK_SVG}</span>
-    <span class="label">${label}</span>${mats}
+    <span class="label">${label}</span>${pending ? PENDING_TAG : ''}${mats}
   </label>`;
+}
+
+/* 素材が Wiki に載っていない段階（情報確認中）。チェックは無く、選べない */
+function missingToggleHtml(label) {
+  return `<div class="check-toggle is-missing" title="Wiki に素材が載っていません（情報確認中）">
+    <span class="box" aria-hidden="true"></span>
+    <span class="label">${label}</span>${PENDING_TAG}
+  </div>`;
 }
 
 /* その育成項目（例 'skill-2-3'）で使う素材。slug → 個数 */
@@ -3338,10 +3416,11 @@ function stepMatsHtml(costs) {
   }).join('')}</span>`;
 }
 
-function groupHtml(titleJa, titleEn, group, items, labelFn, savedKeys, op) {
-  if (!items.length) return '';
-  const checks = items.map((n) =>
-    checkToggleHtml(`${group}-${n}`, labelFn(n), savedKeys.has(`${group}-${n}`), op)
+function groupHtml(titleJa, titleEn, group, items, labelFn, savedKeys, op, missing = []) {
+  if (!items.length && !missing.length) return '';
+  const checks = [...items, ...missing].sort((a, b) => a - b).map((n) => (missing.includes(n)
+    ? missingToggleHtml(labelFn(n))
+    : checkToggleHtml(`${group}-${n}`, labelFn(n), savedKeys.has(`${group}-${n}`), op))
   ).join('');
   return `<div class="modal-group">
     <h4 class="modal-group-heading">${titleJa} <span class="en">${titleEn}</span></h4>
@@ -3356,8 +3435,11 @@ function skillSectionHtml(skillNo, op, savedKeys) {
   for (let lv = 1; lv <= 3; lv++) {
     if (op.costs && op.costs[`skill_${skillNo}_mastery_${lv}`]) levels.push(lv);
   }
-  if (!levels.length) return '';
-  const checks = levels.map((lv) => {
+  // 素材が Wiki に載っていない特化（情報確認中）も、選べない行として出す
+  const missing = missingSteps(op, (lv) => `skill_${skillNo}_mastery_${lv}`, [1, 2, 3]);
+  if (!levels.length && !missing.length) return '';
+  const checks = [1, 2, 3].filter((lv) => levels.includes(lv) || missing.includes(lv)).map((lv) => {
+    if (missing.includes(lv)) return missingToggleHtml(`特化${lv}`);
     const key = `skill-${skillNo}-${lv}`;
     return checkToggleHtml(key, `特化${lv}`, savedKeys.has(key), op);
   }).join('');
@@ -3385,8 +3467,12 @@ function moduleSectionHtml(mod, savedKeys, op) {
   if ((mod.stages || []).includes('unlock'))    items.push({ level: 1, label: 'アンロック' });
   if ((mod.stages || []).includes('enhance_2')) items.push({ level: 2, label: '強化2' });
   if ((mod.stages || []).includes('enhance_3')) items.push({ level: 3, label: '強化3' });
+  // 素材が Wiki に載っていない段階（情報確認中）も、選べない行として出す
+  missingSteps(op, (lv) => `module_${mod.slot}_${MODULE_STAGE_BY_LEVEL[lv - 1]}`, [1, 2, 3])
+    .forEach((level) => items.push({ level, label: MODULE_STAGE_LABEL[level], missing: true }));
   if (!items.length) return '';
-  const checks = items.map(({ level, label }) => {
+  const checks = items.sort((a, b) => a.level - b.level).map(({ level, label, missing }) => {
+    if (missing) return missingToggleHtml(label);
     const key = `module-${mod.slot}-${level}`;
     return checkToggleHtml(key, label, savedKeys.has(key), op);
   }).join('');
@@ -3555,9 +3641,62 @@ function skillDescHtml(d) {
   return `${body}${table}<div class="mod-desc-foot">${legend}${legend2}${SKILL_SRC}</div>`;
 }
 
+/* ----- 情報確認中（operators.js の pending：Wiki に育成素材が載っていない・一部しか載っていない項目） -----
+   'all' = 育成素材がまったく無い / 'promotion_2'・'skill_1_mastery_3'・'module_1_unlock' = その段階が無い・素材が欠けている
+   / 'module:CRA-X' = モジュールごと素材が無い。判定は dump_operators の find_pending() */
+const PENDING_TAG = '<span class="pending-tag">情報確認中</span>';
+
+function isPendingOp(op) {
+  return Array.isArray(op.pending) && op.pending.length > 0;
+}
+
+/* その育成項目（'skill-2-3' など）の素材が欠けているか */
+function isPendingItem(key, op) {
+  if (!op || !isPendingOp(op)) return false;
+  return expandItem(key, op).some((code) => op.pending.includes(code));
+}
+
+/* 選んでいる項目に、素材が欠けているものがあるか */
+function hasPendingSelection(op, keys) {
+  return isPendingOp(op) && [...keys].some((key) => isPendingItem(key, op));
+}
+
+/* 素材が Wiki にまったく載っていない段階（情報確認中で、costs にも無いもの）。codeFn(n) → 'skill_1_mastery_3' など */
+function missingSteps(op, codeFn, ns) {
+  if (!isPendingOp(op)) return [];
+  return ns.filter((n) => op.pending.includes(codeFn(n)) && !(op.costs || {})[codeFn(n)]);
+}
+
+/* 「スキル1 特化1〜3、CRA-X 強化2」のような欠けている項目の一覧 */
+function pendingLabels(op) {
+  const out = [];
+  const skills = {};
+  const mods = {};
+  (op.pending || []).forEach((code) => {
+    let m;
+    if ((m = code.match(/^promotion_(\d+)$/))) out.push(`昇進${m[1]}`);
+    else if ((m = code.match(/^skill_(\d+)_mastery_(\d)$/))) (skills[m[1]] = skills[m[1]] || []).push(+m[2]);
+    else if ((m = code.match(/^module_(\d+)_(\w+)$/))) (mods[m[1]] = mods[m[1]] || []).push(m[2]);
+  });
+  Object.keys(skills).sort().forEach((no) => {
+    const lv = skills[no].sort();
+    out.push(`スキル${no} 特化${lv.length === 3 ? '1〜3' : lv.join('・')}`);
+  });
+  Object.keys(mods).sort().forEach((slot) => {
+    const mod = (op.modules || []).find((x) => String(x.slot) === slot) || {};
+    const stages = [1, 2, 3].filter((lv) => mods[slot].includes(MODULE_STAGE_BY_LEVEL[lv - 1]))
+      .map((lv) => MODULE_STAGE_LABEL[lv]);
+    out.push(`${mod.name || `モジュール${slot}`} ${stages.join('・')}`);
+  });
+  (op.pending || []).filter((code) => code.startsWith('module:'))
+    .forEach((code) => out.push(`モジュール ${code.slice(7)}`));
+  return out;
+}
+
 function buildModalBody(op, savedKeys) {
   const r = getRarityRules(op);
-  let html = groupHtml('昇進', 'PROMOTION', 'promotion', r.promotions, (n) => `昇進${n}`, savedKeys, op);
+  let html = groupHtml('昇進', 'PROMOTION', 'promotion', r.promotions, (n) => `昇進${n}`, savedKeys, op,
+    missingSteps(op, (n) => `promotion_${n}`, [1, 2]));
   // Per-skill sections (data-driven; no section if the skill has no costs)
   [1, 2, 3].forEach((skillNo) => {
     html += skillSectionHtml(skillNo, op, savedKeys);
@@ -3566,10 +3705,28 @@ function buildModalBody(op, savedKeys) {
   if (Array.isArray(op.modules)) {
     op.modules.forEach((mod) => { html += moduleSectionHtml(mod, savedKeys, op); });
   }
-  modalBody.innerHTML = html || `<p class="modal-empty">${noMaterialsText(op)}</p>`;
+  // モジュール表にあるのに素材が1つも載っていないモジュール（情報確認中）
+  (op.pending || []).filter((code) => code.startsWith('module:')).forEach((code) => {
+    html += `<div class="modal-group">
+    <h4 class="modal-group-heading"><span class="ja">${esc(code.slice(7))}</span> <span class="en">MODULE</span></h4>
+    <div class="checks">${missingToggleHtml('アンロック〜強化3')}</div>
+  </div>`;
+  });
+  if (!html) {
+    const all = (op.pending || []).includes('all');
+    modalBody.innerHTML = `<p class="modal-empty${all ? ' is-pending' : ''}">${all ? PENDING_TAG : ''}${noMaterialsText(op)}</p>`;
+    return;
+  }
+  if (isPendingOp(op)) {
+    html = `<p class="modal-pending">${PENDING_TAG}${esc(pendingLabels(op).join('、'))} の素材が Wiki に載っていない、または一部しか載っていません。載り次第、毎月の更新で反映します。</p>${html}`;
+  }
+  modalBody.innerHTML = html;
 }
 
 function noMaterialsText(op) {
+  if ((op.pending || []).includes('all')) {
+    return 'このオペレーターの育成素材は、まだ Wiki に載っていません。載り次第、毎月の更新で反映します。';
+  }
   if (op.limited) return `${op.limited}のオペレーターのため、育成素材はありません。`;
   if (op.rarity <= 2) return '★1・★2 のオペレーターは昇進できないため、育成素材はありません。';
   // e.g. 統合戦略の報酬オペ（レイディアン・メカニスト）: promotion / mastery / modules unlock by run goals
